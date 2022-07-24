@@ -27,7 +27,7 @@ StackFrame::StackFrame(const Program &program, Counter counter)
 
 } // anonymous namespace
 
-RunResult getResult(const ProgramMap &programs, const Program &expr, Counter counter) {
+RunResult getResult(const ProgramMap &programs, const Program &expr, Counter counter, bool debugMode) {
     std::vector<StackFrame> frames = { { expr, counter } };
 
     while (true) {
@@ -81,9 +81,14 @@ RunResult getResult(const ProgramMap &programs, const Program &expr, Counter cou
             }
             frames.emplace_back(programIt->second, counter);
         }
-        else {
-            auto &progInst = std::get<Program>(instruction);
-            frames.emplace_back(progInst, counter);
+        else if (auto *prog = std::get_if<Program>(&instruction); prog) {
+            frames.emplace_back(*prog, counter);
+        }
+        else if (std::holds_alternative<DebugPrint>(instruction)) {
+            if (debugMode) {
+                counter.output();
+            }
+            ii++;
         }
     }
 }

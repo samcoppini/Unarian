@@ -14,6 +14,6 @@ struct RuntimeError {
 
 using RunResult = std::variant<RuntimeError, std::optional<Counter>>;
 
-RunResult getResult(const ProgramMap &programs, const Program &expr, Counter initialVal);
+RunResult getResult(const ProgramMap &programs, const Program &expr, Counter initialVal, bool debugMode);
 
 } // namespace unacpp

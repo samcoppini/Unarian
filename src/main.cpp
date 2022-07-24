@@ -10,11 +10,14 @@ int main(int argc, char **argv) {
     std::string filename;
     std::string expr = "main";
     bool readInput = false;
+    bool debugMode = false;
 
     CLI::App app{"An interpreter for Unarian"};
 
     app.add_option("file", filename, "The unarian file to interpret.")
        ->check(CLI::ExistingFile);
+
+    app.add_flag("-g,--debug", debugMode, "Enables debug printing with the ! command.");
 
     app.add_option("-e,--expr", expr, "The expression to evaluate.");
 
@@ -79,11 +82,11 @@ int main(int argc, char **argv) {
         while (std::cin) {
             uint64_t num;
             if (std::cin >> num) {
-                printResult(unacpp::getResult(programs, program, unacpp::Counter{num}));
+                printResult(unacpp::getResult(programs, program, unacpp::Counter{num}, debugMode));
             }
         }
     }
     else {
-        printResult(unacpp::getResult(programs, program, unacpp::Counter{}));
+        printResult(unacpp::getResult(programs, program, unacpp::Counter{}, debugMode));
     }
 }

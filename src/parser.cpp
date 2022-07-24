@@ -126,6 +126,7 @@ FileParseResult parseFile(std::string_view fileContent) {
     auto tokens = getTokens(fileContent);
     size_t i = 0;
 
+    programs.insert({"!", Program{{Branch{{DebugPrint{}}}}}});
     programs.insert({"-", Program{{Branch{{Decrement{}}}}}});
     programs.insert({"+", Program{{Branch{{Increment{}}}}}});
 

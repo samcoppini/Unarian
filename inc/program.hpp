@@ -10,6 +10,8 @@ namespace unacpp {
 
 class Branch;
 
+class DebugPrint {};
+
 class Decrement {};
 
 class Increment {};
@@ -37,6 +39,7 @@ public:
 };
 
 using Instruction = std::variant<
+    DebugPrint,
     Decrement,
     Increment,
     FuncCall,

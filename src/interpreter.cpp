@@ -1,94 +1,125 @@
 #include "interpreter.hpp"
-
-#include <type_traits>
+#include "bytecode.hpp"
 
 namespace unacpp {
 
 namespace {
 
 struct StackFrame {
-    StackFrame(const Program &program, Counter val);
-
-    const Program &program;
+    StackFrame(Counter counter, uint32_t instIndex);
 
     Counter counter;
-
-    size_t branchIndex;
 
     size_t instIndex;
 };
 
-StackFrame::StackFrame(const Program &program, Counter counter)
-    : program(program)
-    , counter(counter)
-    , branchIndex(0)
-    , instIndex(0)
+StackFrame::StackFrame(Counter counter, uint32_t instIndex)
+    : counter(counter)
+    , instIndex(instIndex)
 {}
 
 } // anonymous namespace
 
-RunResult getResult(const ProgramMap &programs, const Program &expr, Counter counter, bool debugMode) {
-    std::vector<StackFrame> frames = { { expr, counter } };
+std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initialVal) {
+    std::optional<Counter> counter = initialVal;
+    std::vector<StackFrame> frames;
+    uint32_t instIndex = 0;
+
+    auto getByte = [&] {
+        return bytecode[instIndex++];
+    };
+
+    auto getAddress = [&] {
+        uint32_t address = 0;
+        address |= getByte() << 24;
+        address |= getByte() << 16;
+        address |= getByte() << 8;
+        address |= getByte() << 0;
+        return address;
+    };
 
     while (true) {
-        auto &frame = frames.back();
-        auto &program = frame.program;
-
-        auto &bi = frame.branchIndex;
-        auto branches = program.getBranches();
-        if (bi >= branches.size()) {
-            frames.pop_back();
-            if (frames.empty()) {
-                return std::nullopt;
-            }
-            frames.back().branchIndex++;
-            frames.back().instIndex = 0;
-            counter = frames.back().counter;
-            continue;
+        switch (getByte()) {
+        case OpCode::Call: {
+            auto newInst = getAddress();
+            frames.emplace_back(*counter, instIndex);
+            instIndex = newInst;
+            break;
         }
 
-        auto &branch = branches[bi];
-        auto &ii = frame.instIndex;
-        auto instructions = branch.getInstructions();
-        if (ii >= instructions.size()) {
-            frames.pop_back();
+        case OpCode::DecJump:
+            if (!counter->decrement()) {
+                if (frames.empty()) {
+                    counter = initialVal;
+                }
+                else {
+                    counter = frames.back().counter;
+                }
+                instIndex = getAddress();
+            }
+            break;
+
+        case OpCode::DecRet:
+            if (!counter->decrement()) {
+                counter = std::nullopt;
+                if (frames.empty()) {
+                    return counter;
+                }
+                else {
+                    instIndex = frames.back().instIndex;
+                    frames.pop_back();
+                }
+            }
+            break;
+
+        case OpCode::Inc:
+            counter->increment();
+            break;
+
+        case OpCode::Jump:
+            instIndex = getAddress();
+            break;
+
+        case OpCode::JumpOnFailure: {
+            auto jumpIndex = getAddress();
+
+            if (counter == std::nullopt) {
+                if (frames.empty()) {
+                    counter = initialVal;
+                }
+                else {
+                    counter = frames.back().counter;
+                }
+                instIndex = jumpIndex;
+            }
+            break;
+        }
+
+        case OpCode::Print:
+            counter->output();
+            break;
+
+        case OpCode::Ret:
             if (frames.empty()) {
                 return counter;
             }
-            frames.back().instIndex++;
-            continue;
-        }
-
-        auto &instruction = instructions[ii];
-        if (std::holds_alternative<Increment>(instruction)) {
-            counter.increment();
-            ii++;
-        }
-        else if (std::holds_alternative<Decrement>(instruction)) {
-            if (counter.decrement()) {
-                ii++;
-            }
             else {
-                counter = frame.counter;
-                ii = 0;
-                bi++;
+                instIndex = frames.back().instIndex;
+                frames.pop_back();
             }
-        }
-        else if (auto *func = std::get_if<FuncCall>(&instruction); func) {
-            auto programIt = programs.find(func->getFuncName());
-            if (programIt == programs.end()) {
-                return RuntimeError{"Attempted to run non-existent program " + std::string{func->getFuncName()}};
+            break;
+
+        case OpCode::RetOnFailure:
+            if (counter == std::nullopt) {
+                if (frames.empty()) {
+                    return counter;
+                }
+                else {
+                    instIndex = frames.back().instIndex;
+                    frames.pop_back();
+                }
             }
-            frames.emplace_back(programIt->second, counter);
-        }
-        else if (auto *prog = std::get_if<Program>(&instruction); prog) {
-            frames.emplace_back(*prog, counter);
-        }
-        else if (std::holds_alternative<DebugPrint>(instruction)) {
-            if (debugMode) {
-                counter.output();
-            }
-            ii++;
+            break;
         }
     }
 }

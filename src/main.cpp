@@ -11,6 +11,7 @@ int main(int argc, char **argv) {
     std::string expr = "main";
     bool readInput = false;
     bool debugMode = false;
+    bool outputBytecode = false;
 
     CLI::App app{"An interpreter for Unarian"};
 
@@ -23,10 +24,12 @@ int main(int argc, char **argv) {
 
     app.add_flag("-i,--input", readInput, "Uses input from stdin as input to the evaluated expression.");
 
+    app.add_flag("-b,--bytecode", outputBytecode, "Outputs the bytecode generated from the unarian file.");
+
     CLI11_PARSE(app, argc, argv);
 
     std::ifstream file{filename};
-    if (!file.is_open()) {
+    if (!file.is_open() && !filename.empty()) {
         std::cerr << "Unable to open " << filename << '\n';
         return 1;
     }
@@ -62,19 +65,18 @@ int main(int argc, char **argv) {
     const auto &programs = std::get<unacpp::ProgramMap>(fileParseResult);
     const auto &program = std::get<unacpp::Program>(exprParseResult);
 
-    auto printResult = [] (unacpp::RunResult result) {
-        auto *num = std::get_if<std::optional<unacpp::Counter>>(&result);
-        if (num != nullptr) {
-            if (*num == std::nullopt) {
-                std::cout << "-\n";
-            }
-            else {
-                (*num)->output();
-            }
+    auto bytecode = unacpp::generateBytecode(programs, program, debugMode);
+    if (outputBytecode) {
+        std::cout << unacpp::bytecodeToString(bytecode);
+        return 0;
+    }
+
+    auto printResult = [] (std::optional<unacpp::Counter> result) {
+        if (result == std::nullopt) {
+            std::cout << "-\n";
         }
         else {
-            auto error = std::get<unacpp::RuntimeError>(result);
-            std::cout << error.error << '\n';
+            result->output();
         }
     };
 
@@ -82,11 +84,11 @@ int main(int argc, char **argv) {
         while (std::cin) {
             uint64_t num;
             if (std::cin >> num) {
-                printResult(unacpp::getResult(programs, program, unacpp::Counter{num}, debugMode));
+                printResult(unacpp::getResult(bytecode, unacpp::Counter{num}));
             }
         }
     }
     else {
-        printResult(unacpp::getResult(programs, program, unacpp::Counter{}, debugMode));
+        printResult(unacpp::getResult(bytecode, unacpp::Counter{}));
     }
 }

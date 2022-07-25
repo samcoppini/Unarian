@@ -15,6 +15,7 @@ cli11_dep = cli11_proj.get_variable('CLI11_dep')
 unarian_inc = include_directories('inc')
 
 unarian_src = files(
+    'src/bytecode.cpp',
     'src/counter.cpp',
     'src/main.cpp',
     'src/interpreter.cpp',

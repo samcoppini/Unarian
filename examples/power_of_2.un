@@ -1,23 +1,5 @@
-# Outputs 0.
-0 { - 0 | }
-
-# Outputs 1.
-1 { 0 + }
-
-# Fails unless the input is 0.
-if=0 { { - 0 | + } - }
-
-# Fails unless the input is 1.
-if=1 { - if=0 + }
-
-# Divides by 2 if divisible by 2, otherwise fail.
-if/2 { - - if/2 + | if=0 }
-
-# Multiply by two.
 *2 { - *2 + + | }
 
-# Fails unless the input is a power of 2.
-is_power_of_2 { if=1 | if/2 is_power_of_2 *2 }
+^2 { - ^2 *2 | + }
 
-# Outputs 1 if the input is a power of two, or 0 otherwise.
-main { - + is_power_of_2 1 | 0 }
+main { ^2 }

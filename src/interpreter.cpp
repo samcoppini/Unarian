@@ -47,7 +47,9 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
             break;
         }
 
-        case OpCode::DecJump:
+        case OpCode::DecJump: {
+            auto jumpIndex = getAddress();
+
             if (!counter->decrement()) {
                 if (frames.empty()) {
                     counter = initialVal;
@@ -55,9 +57,10 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
                 else {
                     counter = frames.back().counter;
                 }
-                instIndex = getAddress();
+                instIndex = jumpIndex;
             }
             break;
+        }
 
         case OpCode::DecRet:
             if (!counter->decrement()) {

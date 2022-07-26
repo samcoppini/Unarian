@@ -1,4 +1,5 @@
 #include "interpreter.hpp"
+#include "optimizer.hpp"
 #include "parser.hpp"
 
 #include "CLI/CLI.hpp"
@@ -65,7 +66,10 @@ int main(int argc, char **argv) {
     const auto &programs = std::get<unacpp::ProgramMap>(fileParseResult);
     const auto &program = std::get<unacpp::Program>(exprParseResult);
 
-    auto bytecode = unacpp::generateBytecode(programs, program, debugMode);
+    auto optimizedPrograms = unacpp::optimizePrograms(programs);
+    auto optimizedProgram = unacpp::optimizeProgram(optimizedPrograms, program);
+
+    auto bytecode = unacpp::generateBytecode(optimizedPrograms, optimizedProgram, debugMode);
     if (outputBytecode) {
         std::cout << unacpp::bytecodeToString(bytecode);
         return 0;

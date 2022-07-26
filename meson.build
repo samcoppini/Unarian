@@ -19,6 +19,7 @@ unarian_src = files(
     'src/counter.cpp',
     'src/main.cpp',
     'src/interpreter.cpp',
+    'src/optimizer.cpp',
     'src/parser.cpp',
     'src/program.cpp',
     'src/token.cpp',

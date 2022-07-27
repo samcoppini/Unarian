@@ -9,6 +9,7 @@
 namespace unacpp {
 
 enum OpCode: uint8_t {
+    Add,
     Call,
     DecJump,
     DecRet,
@@ -17,6 +18,8 @@ enum OpCode: uint8_t {
     JumpOnFailure,
     Print,
     Ret,
+    SubJump,
+    SubRet,
     RetOnFailure
 };
 

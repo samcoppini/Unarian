@@ -14,7 +14,11 @@ public:
 
     void increment();
 
+    void add(uint32_t val);
+
     bool decrement();
+
+    bool sub(uint32_t val);
 
     void output();
 };

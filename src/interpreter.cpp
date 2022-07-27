@@ -29,6 +29,13 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
         return bytecode[instIndex++];
     };
 
+    auto getValue = [&] {
+        uint16_t val = 0;
+        val |= getByte() << 8;
+        val |= getByte() << 0;
+        return val;
+    };
+
     auto getAddress = [&] {
         uint32_t address = 0;
         address |= getByte() << 24;
@@ -40,6 +47,10 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
 
     while (true) {
         switch (getByte()) {
+        case OpCode::Add:
+            counter->add(getValue());
+            break;
+
         case OpCode::Call: {
             auto newInst = getAddress();
             frames.emplace_back(*counter, instIndex);
@@ -114,6 +125,35 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
 
         case OpCode::RetOnFailure:
             if (counter == std::nullopt) {
+                if (frames.empty()) {
+                    return counter;
+                }
+                else {
+                    instIndex = frames.back().instIndex;
+                    frames.pop_back();
+                }
+            }
+            break;
+
+        case OpCode::SubJump: {
+            auto val = getValue();
+            auto jumpIndex = getAddress();
+
+            if (!counter->sub(val)) {
+                if (frames.empty()) {
+                    counter = initialVal;
+                }
+                else {
+                    counter = frames.back().counter;
+                }
+                instIndex = jumpIndex;
+            }
+            break;
+        }
+
+        case OpCode::SubRet:
+            if (!counter->sub(getValue())) {
+                counter = std::nullopt;
                 if (frames.empty()) {
                     return counter;
                 }

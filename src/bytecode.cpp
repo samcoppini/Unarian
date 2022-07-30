@@ -6,17 +6,13 @@ namespace unacpp {
 
 namespace {
 
+using FuncFailureMap = std::unordered_map<std::string, bool>;
+
 struct ProgramReference {
     uint32_t byteIndex;
 
     std::string_view funcName;
 };
-
-void generateProgram(
-    BytecodeModule &bytecode,
-    const Program &program,
-    std::vector<ProgramReference> &unresolvedReferences,
-    bool debugMode);
 
 void replacePlaceholderAddress(BytecodeModule &bytecode, uint32_t replaceIndex, uint32_t address) {
     bytecode[replaceIndex + 0] = (address >> 24) & 0xFF;
@@ -25,10 +21,48 @@ void replacePlaceholderAddress(BytecodeModule &bytecode, uint32_t replaceIndex, 
     bytecode[replaceIndex + 3] = (address >>  0) & 0xFF;
 }
 
+bool funcCallCanFail(const ProgramMap &programs, const std::string &funcName, FuncFailureMap &funcsFail);
+
+bool branchCanFail(const ProgramMap &programs, const Branch &branch, std::unordered_map<std::string, bool> &funcsFail) {
+    for (auto &inst: branch.getInstructions()) {
+        if (std::holds_alternative<Decrement>(inst)) {
+            return true;
+        }
+        else if (auto func = std::get_if<FuncCall>(&inst); func) {
+            if (funcCallCanFail(programs, func->getFuncName(), funcsFail)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool funcCallCanFail(const ProgramMap &programs, const std::string &funcName, FuncFailureMap &funcsFail) {
+    auto funcIt = funcsFail.find(funcName);
+    if (funcIt != funcsFail.end()) {
+        return funcIt->second;
+    }
+
+    funcsFail[funcName] = true;
+
+    auto &program = programs.at(funcName);
+    for (auto &branch: program.getBranches()) {
+        if (!branchCanFail(programs, branch, funcsFail)) {
+            funcsFail[funcName] = false;
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void generateBranch(
     BytecodeModule &bytecode,
+    const ProgramMap &programs,
     const Branch &branch,
     std::vector<ProgramReference> &unresolvedReferences,
+    FuncFailureMap funcsFail,
     bool lastBranch,
     bool debugMode)
 {
@@ -108,17 +142,26 @@ void generateBranch(
             }
         }
         else if (auto call = std::get_if<FuncCall>(&inst); call) {
-            bytecode.push_back(OpCode::Call);
+            bool callCanFail = funcCallCanFail(programs, call->getFuncName(), funcsFail);
+
+            if (lastInst && !callCanFail) {
+                bytecode.push_back(OpCode::TailCall);
+            }
+            else {
+                bytecode.push_back(OpCode::Call);
+            }
             unresolvedReferences.emplace_back(bytecode.size(), call->getFuncName());
             addPlaceholderAddress();
 
-            if (!lastBranch) {
-                bytecode.push_back(OpCode::JumpOnFailure);
-                nextBranchReferences.push_back(bytecode.size());
-                addPlaceholderAddress();
-            }
-            else if (!lastInst) {
-                bytecode.push_back(OpCode::RetOnFailure);
+            if (callCanFail) {
+                if (!lastBranch) {
+                    bytecode.push_back(OpCode::JumpOnFailure);
+                    nextBranchReferences.push_back(bytecode.size());
+                    addPlaceholderAddress();
+                }
+                else if (!lastInst) {
+                    bytecode.push_back(OpCode::RetOnFailure);
+                }
             }
         }
         else if (std::holds_alternative<DebugPrint>(inst) && debugMode) {
@@ -142,14 +185,16 @@ void generateBranch(
 
 void generateProgram(
     BytecodeModule &bytecode,
+    const ProgramMap &programs,
     const Program &program,
     std::vector<ProgramReference> &unresolvedReferences,
+    FuncFailureMap &funcsFail,
     bool debugMode)
 {
     auto branches = program.getBranches();
 
     for (size_t i = 0; i < branches.size(); i++) {
-        generateBranch(bytecode, branches[i], unresolvedReferences, i + 1 == branches.size(), debugMode);
+        generateBranch(bytecode, programs, branches[i], unresolvedReferences, funcsFail, i + 1 == branches.size(), debugMode);
     }
 }
 
@@ -163,6 +208,7 @@ std::vector<size_t> argumentSizes(OpCode opcode) {
         case OpCode::DecJump:
         case OpCode::Jump:
         case OpCode::JumpOnFailure:
+        case OpCode::TailCall:
             return { 4 };
 
         case OpCode::SubJump:
@@ -187,6 +233,7 @@ std::string_view opcodeName(OpCode opcode) {
         case OpCode::RetOnFailure:  return "FAIL_RET";
         case OpCode::SubJump:       return "SUB_JMP";
         case OpCode::SubRet:        return "SUB_RET";
+        case OpCode::TailCall:      return "TAIL_CALL";
         default:                    return "ERROR";
     }
 }
@@ -197,13 +244,14 @@ BytecodeModule generateBytecode(const ProgramMap &programs, const std::string &m
     BytecodeModule bytecode;
     std::vector<ProgramReference> programReferences;
     std::unordered_map<std::string_view, uint32_t> programStarts;
+    FuncFailureMap funcsFail;
 
-    generateProgram(bytecode, programs.at(mainName), programReferences, debugMode);
+    generateProgram(bytecode, programs, programs.at(mainName), programReferences, funcsFail, debugMode);
 
     for (auto &[progName, program]: programs) {
         if (mainName != progName) {
             programStarts[progName] = bytecode.size();
-            generateProgram(bytecode, program, programReferences, debugMode);
+            generateProgram(bytecode, programs, program, programReferences, funcsFail, debugMode);
         }
     }
 

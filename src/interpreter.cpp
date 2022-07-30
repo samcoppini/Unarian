@@ -163,6 +163,16 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
                 }
             }
             break;
+
+        case OpCode::TailCall:
+            instIndex = getAddress();
+            if (frames.empty()) {
+                initialVal = *counter;
+            }
+            else {
+                frames.back().counter = *counter;
+            }
+            break;
         }
     }
 }

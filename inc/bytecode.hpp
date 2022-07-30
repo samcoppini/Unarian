@@ -18,9 +18,10 @@ enum OpCode: uint8_t {
     JumpOnFailure,
     Print,
     Ret,
+    RetOnFailure,
     SubJump,
     SubRet,
-    RetOnFailure
+    TailCall,
 };
 
 using BytecodeModule = std::vector<uint8_t>;

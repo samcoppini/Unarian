@@ -36,9 +36,6 @@ Branch inlineBranch(const Branch &branch, const ProgramMap &programs) {
                 insts.push_back(inlineInst);
             }
         }
-        else if (auto *progInst = std::get_if<Program>(&inst); progInst) {
-            insts.push_back(inlineProgram(*progInst, programs));
-        }
         else {
             insts.push_back(inst);
         }
@@ -92,10 +89,6 @@ ProgramMap inlinePrograms(const ProgramMap &programs) {
 }
 
 } // anonymous namespace
-
-Program optimizeProgram(const ProgramMap &programs, const Program &program) {
-    return inlineProgram(program, programs);
-}
 
 ProgramMap optimizePrograms(const ProgramMap &programs) {
     return inlinePrograms(programs);

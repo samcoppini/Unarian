@@ -6,7 +6,7 @@ FuncCall::FuncCall(std::string_view funcName)
     : funcName_(funcName)
 {}
 
-std::string_view FuncCall::getFuncName() const {
+const std::string &FuncCall::getFuncName() const {
     return funcName_;
 }
 
@@ -21,8 +21,6 @@ std::span<const Instruction> Branch::getInstructions() const {
 Program::Program(std::vector<Branch> branches)
     : branches_(std::move(branches))
 {}
-
-Program::~Program() {}
 
 std::span<const Branch> Program::getBranches() const {
     return std::span{branches_.begin(), branches_.size()};

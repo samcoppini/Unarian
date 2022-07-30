@@ -2,13 +2,12 @@
 
 #include <unordered_map>
 #include <span>
+#include <string>
 #include <string_view>
 #include <variant>
 #include <vector>
 
 namespace unacpp {
-
-class Branch;
 
 class DebugPrint {};
 
@@ -18,32 +17,19 @@ class Increment {};
 
 class FuncCall {
 private:
-    std::string_view funcName_;
+    std::string funcName_;
 
 public:
     FuncCall(std::string_view funcName);
 
-    std::string_view getFuncName() const;
-};
-
-class Program {
-private:
-    std::vector<Branch> branches_;
-
-public:
-    Program(std::vector<Branch> branches);
-
-    ~Program();
-
-    std::span<const Branch> getBranches() const;
+    const std::string &getFuncName() const;
 };
 
 using Instruction = std::variant<
     DebugPrint,
     Decrement,
     Increment,
-    FuncCall,
-    Program
+    FuncCall
 >;
 
 class Branch {
@@ -56,6 +42,16 @@ public:
     std::span<const Instruction> getInstructions() const;
 };
 
-using ProgramMap = std::unordered_map<std::string_view, Program>;
+class Program {
+private:
+    std::vector<Branch> branches_;
+
+public:
+    Program(std::vector<Branch> branches);
+
+    std::span<const Branch> getBranches() const;
+};
+
+using ProgramMap = std::unordered_map<std::string, Program>;
 
 } // namespace unacpp

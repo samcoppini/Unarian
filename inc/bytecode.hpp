@@ -25,7 +25,7 @@ enum OpCode: uint8_t {
 
 using BytecodeModule = std::vector<uint8_t>;
 
-BytecodeModule generateBytecode(const ProgramMap &program, const Program &expr, bool debugMode);
+BytecodeModule generateBytecode(const ProgramMap &program, const std::string &mainName, bool debugMode);
 
 std::string bytecodeToString(const BytecodeModule &bytecode);
 

@@ -9,16 +9,7 @@ using namespace std::string_literals;
 
 namespace unacpp {
 
-namespace {
-
-enum class TokenType {
-    Branch,
-    EndGroup,
-    Name,
-    StartGroup,
-};
-
-TokenType getType(const Token &token) {
+Parser::TokenType Parser::getType(const Token &token) {
     if (token.content == "|") {
         return TokenType::Branch;
     }
@@ -33,29 +24,35 @@ TokenType getType(const Token &token) {
     }
 }
 
-std::optional<Token> getIf(const std::vector<Token> &tokens, size_t &i, TokenType type) {
-    if (i >= tokens.size() || getType(tokens[i]) != type) {
+std::optional<Token> Parser::getIf(TokenType type) {
+    if (index_ >= tokens_.size() || getType(tokens_[index_]) != type) {
         return std::nullopt;
     }
-    return tokens[i++];
+    return tokens_[index_++];
 }
 
-std::optional<Program> parseProgram(const std::vector<Token> &, size_t &, ParseErrors &);
+std::string Parser::getAnonymousProgramName() const {
+    return std::to_string(programs_.size()) + " ";
+}
 
-Branch parseBranch(const std::vector<Token> &tokens, size_t &i, ParseErrors &errors) {
+Branch Parser::parseBranch() {
     std::vector<Instruction> instructions;
     std::optional<Token> token;
 
     auto nextToken = [&] {
-        return ((token = getIf(tokens, i, TokenType::Name)) != std::nullopt) ||
-               ((token = getIf(tokens, i, TokenType::StartGroup)) != std::nullopt);
+        return ((token = getIf(TokenType::Name)) != std::nullopt) ||
+               ((token = getIf(TokenType::StartGroup)) != std::nullopt);
     };
 
     while (nextToken()) {
         if (token->content == "{") {
-            auto program = parseProgram(tokens, --i, errors);
+            index_--;
+            auto program = parseProgram();
+
             if (program != std::nullopt) {
-                instructions.emplace_back(std::move(*program));
+                auto progName = getAnonymousProgramName();
+                programs_.insert({progName, *program});
+                instructions.push_back(FuncCall{progName});
             }
         }
         else {
@@ -66,102 +63,103 @@ Branch parseBranch(const std::vector<Token> &tokens, size_t &i, ParseErrors &err
     return Branch{instructions};
 }
 
-std::optional<Program> parseProgram(const std::vector<Token> &tokens, size_t &i, ParseErrors &errors) {
-    auto startGroup = getIf(tokens, i, TokenType::StartGroup);
+std::optional<Program> Parser::parseProgram() {
+    auto startGroup = getIf(TokenType::StartGroup);
 
     if (startGroup == std::nullopt) {
         FilePosition pos;
-        if (i >= tokens.size()) {
-            pos = tokens[i - 1].pos;
-            pos.col += tokens[i - 1].content.size();
+        if (index_ >= tokens_.size()) {
+            pos = tokens_[index_ - 1].pos;
+            pos.col += tokens_[index_ - 1].content.size();
         }
         else {
-            pos = tokens[i].pos;
+            pos = tokens_[index_].pos;
         }
-        errors.emplace_back(pos, "Expected a {");
+        errors_.emplace_back(pos, "Expected a {");
         return std::nullopt;
     }
 
     std::vector<Branch> branches;
 
     do {
-        branches.push_back(parseBranch(tokens, i, errors));
-    } while (getIf(tokens, i, TokenType::Branch) != std::nullopt);
+        branches.push_back(parseBranch());
+    } while (getIf(TokenType::Branch) != std::nullopt);
 
-    if (getIf(tokens, i, TokenType::EndGroup) == std::nullopt) {
-        errors.emplace_back(startGroup->pos, "No matching } for {");
+    if (getIf(TokenType::EndGroup) == std::nullopt) {
+        errors_.emplace_back(startGroup->pos, "No matching } for {");
         return std::nullopt;
     }
 
     return Program{std::move(branches)};
 }
 
-void parseNamedProgram(const std::vector<Token> &tokens, size_t &i, ProgramMap &programs, ParseErrors &errors) {
-    auto nameToken = getIf(tokens, i, TokenType::Name);
+void Parser::parseExpression(std::string_view expr) {
+    tokens_ = getTokens(expr);
+    index_ = 0;
+
+    std::vector<Branch> branches;
+
+    do {
+        branches.push_back(parseBranch());
+    } while (getIf(TokenType::Branch) != std::nullopt);
+
+    if (index_ < tokens_.size()) {
+        errors_.emplace_back(tokens_[index_].pos, "Unexpected " + std::string{tokens_[index_].content} + " encountered");
+    }
+
+    exprName_ = getAnonymousProgramName();
+    programs_.insert({exprName_, Program{branches}});
+}
+
+void Parser::parseNamedProgram() {
+    auto nameToken = getIf(TokenType::Name);
 
     if (nameToken == std::nullopt) {
-        errors.emplace_back(tokens[i].pos, "Expected a name!");
-        i++;
+        errors_.emplace_back(tokens_[index_].pos, "Expected a name!");
+        index_++;
         return;
     }
 
-    auto program = parseProgram(tokens, i, errors);
+    auto program = parseProgram();
 
     if (program != std::nullopt) {
-        if (programs.count(nameToken->content)) {
-            errors.emplace_back(nameToken->pos, "Cannot redefine " + std::string{nameToken->content});
+        if (programs_.count(std::string{nameToken->content})) {
+            errors_.emplace_back(nameToken->pos, "Cannot redefine " + std::string{nameToken->content});
         }
         else {
-            programs.insert({nameToken->content, *program});
+            programs_.insert({std::string{nameToken->content}, *program});
         }
     }
 }
 
-} // anonymous namespace
-
-FileParseResult parseFile(std::string_view fileContent) {
-    ProgramMap programs;
-    ParseErrors errors;
-
-    auto tokens = getTokens(fileContent);
-    size_t i = 0;
-
-    programs.insert({"!", Program{{Branch{{DebugPrint{}}}}}});
-    programs.insert({"-", Program{{Branch{{Decrement{}}}}}});
-    programs.insert({"+", Program{{Branch{{Increment{}}}}}});
-
-    while (i < tokens.size()) {
-        parseNamedProgram(tokens, i, programs, errors);
-    }
-
-    if (errors.empty()) {
-        return programs;
-    }
-    else {
-        return errors;
+void Parser::parseFilePrograms() {
+    while (index_ < tokens_.size()) {
+        parseNamedProgram();
     }
 }
 
-ExpressionParseResult parseExpression(std::string_view expression) {
-    std::vector<Branch> branches;
-    ParseErrors errors;
+Parser::Parser(std::string_view fileContent, std::string_view expr)
+    : tokens_(getTokens(fileContent))
+    , index_(0)
+{
+    programs_.insert({"!", Program{{Branch{{DebugPrint{}}}}}});
+    programs_.insert({"-", Program{{Branch{{Decrement{}}}}}});
+    programs_.insert({"+", Program{{Branch{{Increment{}}}}}});
 
-    auto tokens = getTokens(expression);
-    size_t i = 0;
+    parseFilePrograms();
+    parseExpression(expr);
+}
 
-    do {
-        branches.push_back(parseBranch(tokens, i, errors));
-    } while (getIf(tokens, i, TokenType::Branch) != std::nullopt);
+const std::string &Parser::getExpressionName() const {
+    return exprName_;
+}
 
-    if (i < tokens.size()) {
-        errors.emplace_back(tokens[i].pos, "Unexpected " + std::string{tokens[i].content} + " encountered");
-    }
-
-    if (errors.empty()) {
-        return Program{std::move(branches)};
+FileParseResult Parser::getParseResult() const {
+    if (errors_.empty()) {
+        return programs_;
     }
     else {
-        return errors;
+        return errors_;
     }
 }
 

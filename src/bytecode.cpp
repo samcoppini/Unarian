@@ -107,44 +107,6 @@ void generateBranch(
                 curSub++;
             }
         }
-        else if (auto prog = std::get_if<Program>(&inst); prog) {
-            bytecode.push_back(OpCode::Call);
-            auto nestedProgIndex = bytecode.size();
-            addPlaceholderAddress();
-
-            if (lastBranch) {
-                if (lastInst) {
-                    bytecode.push_back(OpCode::Ret);
-                }
-                else {
-                    bytecode.push_back(OpCode::RetOnFailure);
-                }
-            }
-            else {
-                bytecode.push_back(OpCode::JumpOnFailure);
-                nextBranchReferences.push_back(bytecode.size());
-                addPlaceholderAddress();
-            }
-
-            uint32_t jumpLocation = 0;
-
-            if (!lastInst) {
-                bytecode.push_back(OpCode::Jump);
-                jumpLocation = bytecode.size();
-                addPlaceholderAddress();
-            }
-            else if (!lastBranch) {
-                bytecode.push_back(OpCode::Ret);
-            }
-
-            replacePlaceholderAddress(bytecode, nestedProgIndex, bytecode.size());
-
-            generateProgram(bytecode, *prog, unresolvedReferences, debugMode);
-
-            if (jumpLocation) {
-                replacePlaceholderAddress(bytecode, jumpLocation, bytecode.size());
-            }
-        }
         else if (auto call = std::get_if<FuncCall>(&inst); call) {
             bytecode.push_back(OpCode::Call);
             unresolvedReferences.emplace_back(bytecode.size(), call->getFuncName());
@@ -231,16 +193,18 @@ std::string_view opcodeName(OpCode opcode) {
 
 } // anonymous namespace
 
-BytecodeModule generateBytecode(const ProgramMap &programs, const Program &expr, bool debugMode) {
+BytecodeModule generateBytecode(const ProgramMap &programs, const std::string &mainName, bool debugMode) {
     BytecodeModule bytecode;
     std::vector<ProgramReference> programReferences;
     std::unordered_map<std::string_view, uint32_t> programStarts;
 
-    generateProgram(bytecode, expr, programReferences, debugMode);
+    generateProgram(bytecode, programs.at(mainName), programReferences, debugMode);
 
     for (auto &[progName, program]: programs) {
-        programStarts[progName] = bytecode.size();
-        generateProgram(bytecode, program, programReferences, debugMode);
+        if (mainName != progName) {
+            programStarts[progName] = bytecode.size();
+            generateProgram(bytecode, program, programReferences, debugMode);
+        }
     }
 
     for (auto [index, funcName]: programReferences) {

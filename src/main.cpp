@@ -43,7 +43,8 @@ int main(int argc, char **argv) {
         fileContents = fileStream.str();
     }
 
-    auto fileParseResult = unacpp::parseFile(fileContents);
+    unacpp::Parser parser{fileContents, expr};
+    auto fileParseResult = parser.getParseResult();
     if (std::holds_alternative<unacpp::ParseErrors>(fileParseResult)) {
         auto errors = std::get<unacpp::ParseErrors>(fileParseResult);
         for (auto &error: errors) {
@@ -53,23 +54,12 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    auto exprParseResult = unacpp::parseExpression(expr);
-    if (std::holds_alternative<unacpp::ParseErrors>(exprParseResult)) {
-        auto errors = std::get<unacpp::ParseErrors>(fileParseResult);
-        for (auto &error: errors) {
-            std::cerr << "On line " << error.pos.line << ", column " << error.pos.col
-                    << ": " << error.message << '\n';
-        }
-        return 3;
-    }
-
     const auto &programs = std::get<unacpp::ProgramMap>(fileParseResult);
-    const auto &program = std::get<unacpp::Program>(exprParseResult);
 
     auto optimizedPrograms = unacpp::optimizePrograms(programs);
-    auto optimizedProgram = unacpp::optimizeProgram(optimizedPrograms, program);
+    auto programName = parser.getExpressionName();
 
-    auto bytecode = unacpp::generateBytecode(optimizedPrograms, optimizedProgram, debugMode);
+    auto bytecode = unacpp::generateBytecode(optimizedPrograms, programName, debugMode);
     if (outputBytecode) {
         std::cout << unacpp::bytecodeToString(bytecode);
         return 0;

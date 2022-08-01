@@ -109,6 +109,10 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
             break;
         }
 
+        case OpCode::Mult:
+            counter->multiply(getValue());
+            break;
+
         case OpCode::Print:
             counter->output();
             break;

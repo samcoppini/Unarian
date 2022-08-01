@@ -16,6 +16,7 @@ enum OpCode: uint8_t {
     Inc,
     Jump,
     JumpOnFailure,
+    Mult,
     Print,
     Ret,
     RetOnFailure,

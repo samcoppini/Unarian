@@ -25,7 +25,7 @@ bool funcCallCanFail(const ProgramMap &programs, const std::string &funcName, Fu
 
 bool branchCanFail(const ProgramMap &programs, const Branch &branch, std::unordered_map<std::string, bool> &funcsFail) {
     for (auto &inst: branch.getInstructions()) {
-        if (std::holds_alternative<Decrement>(inst)) {
+        if (std::holds_alternative<SubtractProgram>(inst)) {
             return true;
         }
         else if (auto func = std::get_if<FuncCall>(&inst); func) {
@@ -68,8 +68,6 @@ void generateBranch(
 {
     auto instructions = branch.getInstructions();
     std::vector<uint32_t> nextBranchReferences;
-    uint32_t curAdd = 0;
-    uint32_t curSub = 0;
 
     auto addPlaceholderAddress = [&] {
         bytecode.insert(bytecode.end(), 4, 255);
@@ -80,65 +78,45 @@ void generateBranch(
         bytecode.push_back((val & 0x00FF) >> 0);
     };
 
-    auto pushAddInstruction = [&] {
-        if (curAdd == 1) {
-            bytecode.push_back(OpCode::Inc);
-        }
-        else {
-            bytecode.push_back(OpCode::Add);
-            addValue(curAdd);
-        }
-        curAdd = 0;
-    };
-
-    auto pushSubInstruction = [&] {
-        if (lastBranch) {
-            if (curSub == 1) {
-                bytecode.push_back(OpCode::DecRet);
-            }
-            else {
-                bytecode.push_back(OpCode::SubRet);
-                addValue(curSub);
-            }
-        }
-        else {
-            if (curSub == 1) {
-                bytecode.push_back(OpCode::DecJump);
-            }
-            else {
-                bytecode.push_back(OpCode::SubJump);
-                addValue(curSub);
-            }
-            nextBranchReferences.push_back(bytecode.size());
-            addPlaceholderAddress();
-        }
-        curSub = 0;
-    };
-
     for (size_t i = 0; i < instructions.size(); i++) {
         auto &inst = instructions[i];
         bool lastInst = (i == instructions.size() - 1);
 
-        if (curSub > 0 && (!std::holds_alternative<Decrement>(inst) || curSub == UINT16_MAX)) {
-            pushSubInstruction();
-        }
-
-        if (curAdd > 0 && (
-            (!std::holds_alternative<Decrement>(inst) && !std::holds_alternative<Increment>(inst)) ||
-            (std::holds_alternative<Increment>(inst) && curAdd == UINT16_MAX)))
-        {
-            pushAddInstruction();
-        }
-
-        if (std::holds_alternative<Increment>(inst)) {
-            curAdd++;
-        }
-        else if (std::holds_alternative<Decrement>(inst)) {
-            if (curAdd > 0) {
-                curAdd--;
+        if (auto add = std::get_if<AddProgram>(&inst); add) {
+            if (add->getAmount() == 1) {
+                bytecode.push_back(OpCode::Inc);
             }
             else {
-                curSub++;
+                bytecode.push_back(OpCode::Add);
+                addValue(add->getAmount());
+            }
+        }
+        else if (auto mult = std::get_if<MultiplyProgram>(&inst); mult) {
+            bytecode.push_back(OpCode::Mult);
+            addValue(mult->getAmount());
+        }
+        else if (auto sub = std::get_if<SubtractProgram>(&inst); sub) {
+            if (sub->getAmount() == 1) {
+                if (lastBranch) {
+                    bytecode.push_back(OpCode::DecRet);
+                }
+                else {
+                    bytecode.push_back(OpCode::DecJump);
+                    nextBranchReferences.push_back(bytecode.size());
+                    addPlaceholderAddress();
+                }
+            }
+            else {
+                if (lastBranch) {
+                    bytecode.push_back(OpCode::SubRet);
+                    addValue(sub->getAmount());
+                }
+                else {
+                    bytecode.push_back(OpCode::SubJump);
+                    addValue(sub->getAmount());
+                    nextBranchReferences.push_back(bytecode.size());
+                    addPlaceholderAddress();
+                }
             }
         }
         else if (auto call = std::get_if<FuncCall>(&inst); call) {
@@ -169,13 +147,6 @@ void generateBranch(
         }
     }
 
-    if (curAdd > 0) {
-        pushAddInstruction();
-    }
-    else if (curSub > 0) {
-        pushSubInstruction();
-    }
-
     bytecode.push_back(OpCode::Ret);
 
     for (auto ref: nextBranchReferences) {
@@ -201,6 +172,7 @@ void generateProgram(
 std::vector<size_t> argumentSizes(OpCode opcode) {
     switch (opcode) {
         case OpCode::Add:
+        case OpCode::Mult:
         case OpCode::SubRet:
             return { 2 };
 
@@ -228,6 +200,7 @@ std::string_view opcodeName(OpCode opcode) {
         case OpCode::Inc:           return "INC";
         case OpCode::Jump:          return "JMP";
         case OpCode::JumpOnFailure: return "FAIL_JMP";
+        case OpCode::Mult:          return "MULT";
         case OpCode::Print:         return "PRINT";
         case OpCode::Ret:           return "RET";
         case OpCode::RetOnFailure:  return "FAIL_RET";

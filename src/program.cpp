@@ -2,6 +2,30 @@
 
 namespace unacpp {
 
+AddProgram::AddProgram(uint32_t amount)
+    : amount_(amount)
+{}
+
+uint32_t AddProgram::getAmount() const {
+    return amount_;
+}
+
+MultiplyProgram::MultiplyProgram(uint32_t amount)
+    : amount_(amount)
+{}
+
+uint32_t MultiplyProgram::getAmount() const {
+    return amount_;
+}
+
+SubtractProgram::SubtractProgram(uint32_t amount)
+    : amount_(amount)
+{}
+
+uint32_t SubtractProgram::getAmount() const {
+    return amount_;
+}
+
 FuncCall::FuncCall(std::string_view funcName)
     : funcName_(funcName)
 {}

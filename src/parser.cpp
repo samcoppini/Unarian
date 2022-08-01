@@ -143,8 +143,8 @@ Parser::Parser(std::string_view fileContent, std::string_view expr)
     , index_(0)
 {
     programs_.insert({"!", Program{{Branch{{DebugPrint{}}}}}});
-    programs_.insert({"-", Program{{Branch{{Decrement{}}}}}});
-    programs_.insert({"+", Program{{Branch{{Increment{}}}}}});
+    programs_.insert({"-", Program{{Branch{{SubtractProgram{1}}}}}});
+    programs_.insert({"+", Program{{Branch{{AddProgram{1}}}}}});
 
     parseFilePrograms();
     parseExpression(expr);

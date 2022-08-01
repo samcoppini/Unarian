@@ -11,9 +11,35 @@ namespace unacpp {
 
 class DebugPrint {};
 
-class Decrement {};
+class AddProgram {
+private:
+    uint32_t amount_;
 
-class Increment {};
+public:
+    AddProgram(uint32_t amount);
+
+    uint32_t getAmount() const;
+};
+
+class MultiplyProgram {
+private:
+    uint32_t amount_;
+
+public:
+    MultiplyProgram(uint32_t amount);
+
+    uint32_t getAmount() const;
+};
+
+class SubtractProgram {
+private:
+    uint32_t amount_;
+
+public:
+    SubtractProgram(uint32_t amount);
+
+    uint32_t getAmount() const;
+};
 
 class FuncCall {
 private:
@@ -26,10 +52,11 @@ public:
 };
 
 using Instruction = std::variant<
+    AddProgram,
     DebugPrint,
-    Decrement,
-    Increment,
-    FuncCall
+    FuncCall,
+    MultiplyProgram,
+    SubtractProgram
 >;
 
 class Branch {

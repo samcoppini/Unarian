@@ -20,6 +20,10 @@ void Counter::add(uint32_t val) {
     value_ += val;
 }
 
+void Counter::multiply(uint32_t val) {
+    value_ *= val;
+}
+
 bool Counter::decrement() {
     if (value_ == 0) {
         return false;

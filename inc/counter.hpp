@@ -16,6 +16,8 @@ public:
 
     void add(uint32_t val);
 
+    void multiply(uint32_t val);
+
     bool decrement();
 
     bool sub(uint32_t val);

@@ -7,9 +7,35 @@
 #include <iostream>
 #include <fstream>
 
+template <typename T>
+void printResult(const std::optional<T> &result) {
+    if (result == std::nullopt) {
+        std::cout << "-\n";
+    }
+    else {
+        std::cout << *result << '\n';
+    }
+}
+
+template <typename T>
+void runInterpreter(const unacpp::BytecodeModule &bytecode, bool readInput) {
+    if (readInput) {
+        while (std::cin) {
+            T num;
+            if (std::cin >> num) {
+                printResult(unacpp::getResult(bytecode, num));
+            }
+        }
+    }
+    else {
+        printResult(unacpp::getResult(bytecode, T{0}));
+    }
+}
+
 int main(int argc, char **argv) {
     std::string filename;
     std::string expr = "main";
+    bool arbitraryPrecision = false;
     bool readInput = false;
     bool debugMode = false;
     bool outputBytecode = false;
@@ -18,6 +44,9 @@ int main(int argc, char **argv) {
 
     app.add_option("file", filename, "The unarian file to interpret.")
        ->check(CLI::ExistingFile);
+
+    app.add_flag("-a,--arbitrary", arbitraryPrecision,
+                 "Use arbitrary precision math. Otherwise, the interpreter will only use a 64-bit integer.");
 
     app.add_flag("-g,--debug", debugMode, "Enables debug printing with the ! command.");
 
@@ -65,24 +94,10 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    auto printResult = [] (std::optional<unacpp::Counter> result) {
-        if (result == std::nullopt) {
-            std::cout << "-\n";
-        }
-        else {
-            result->output();
-        }
-    };
-
-    if (readInput) {
-        while (std::cin) {
-            uint64_t num;
-            if (std::cin >> num) {
-                printResult(unacpp::getResult(bytecode, unacpp::Counter{num}));
-            }
-        }
+    if (arbitraryPrecision) {
+        runInterpreter<unacpp::BigInt>(bytecode, readInput);
     }
     else {
-        printResult(unacpp::getResult(bytecode, unacpp::Counter{}));
+        runInterpreter<uint64_t>(bytecode, readInput);
     }
 }

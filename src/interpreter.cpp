@@ -1,28 +1,65 @@
 #include "interpreter.hpp"
 #include "bytecode.hpp"
 
+#include <iostream>
+
 namespace unacpp {
 
 namespace {
 
+template <typename NumberType>
 struct StackFrame {
-    StackFrame(Counter counter, uint32_t instIndex);
+    StackFrame(NumberType val, uint32_t instIndex);
 
-    Counter counter;
+    NumberType val;
 
     size_t instIndex;
 };
 
-StackFrame::StackFrame(Counter counter, uint32_t instIndex)
-    : counter(counter)
+template <typename NumberType>
+StackFrame<NumberType>::StackFrame(NumberType val, uint32_t instIndex)
+    : val(val)
     , instIndex(instIndex)
 {}
 
+void add(uint64_t &num, uint64_t addend) {
+    num += addend;
+}
+
+void add(BigInt &num, BigInt addend) {
+    num += addend;
+}
+
+void multiply(uint64_t &num, uint64_t factor) {
+    num *= factor;
+}
+
+void multiply(BigInt &num, uint64_t factor) {
+    num *= factor;
+}
+
+bool subtract(uint64_t &num, uint64_t subtrahend) {
+    if (subtrahend > num) {
+        return false;
+    }
+    num -= subtrahend;
+    return true;
+}
+
+bool subtract(BigInt &num, uint64_t subtrahend) {
+    if (subtrahend > num) {
+        return false;
+    }
+    num -= subtrahend;
+    return true;
+}
+
 } // anonymous namespace
 
-std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initialVal) {
-    std::optional<Counter> counter = initialVal;
-    std::vector<StackFrame> frames;
+template <typename NumberType>
+std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType initialVal) {
+    std::vector<StackFrame<NumberType>> frames;
+    std::optional<NumberType> val = initialVal;
     uint32_t instIndex = 0;
 
     auto getByte = [&] {
@@ -48,12 +85,12 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
     while (true) {
         switch (getByte()) {
         case OpCode::Add:
-            counter->add(getValue());
+            add(*val, getValue());
             break;
 
         case OpCode::Call: {
             auto newInst = getAddress();
-            frames.emplace_back(*counter, instIndex);
+            frames.emplace_back(*val, instIndex);
             instIndex = newInst;
             break;
         }
@@ -61,12 +98,12 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
         case OpCode::DecJump: {
             auto jumpIndex = getAddress();
 
-            if (!counter->decrement()) {
+            if (!subtract(*val, 1)) {
                 if (frames.empty()) {
-                    counter = initialVal;
+                    val = initialVal;
                 }
                 else {
-                    counter = frames.back().counter;
+                    val = frames.back().val;
                 }
                 instIndex = jumpIndex;
             }
@@ -74,10 +111,10 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
         }
 
         case OpCode::DecRet:
-            if (!counter->decrement()) {
-                counter = std::nullopt;
+            if (!subtract(*val, 1)) {
+                val = std::nullopt;
                 if (frames.empty()) {
-                    return counter;
+                    return val;
                 }
                 else {
                     instIndex = frames.back().instIndex;
@@ -87,7 +124,7 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
             break;
 
         case OpCode::Inc:
-            counter->increment();
+            add(*val, 1);
             break;
 
         case OpCode::Jump:
@@ -97,12 +134,12 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
         case OpCode::JumpOnFailure: {
             auto jumpIndex = getAddress();
 
-            if (counter == std::nullopt) {
+            if (val == std::nullopt) {
                 if (frames.empty()) {
-                    counter = initialVal;
+                    val = initialVal;
                 }
                 else {
-                    counter = frames.back().counter;
+                    val = frames.back().val;
                 }
                 instIndex = jumpIndex;
             }
@@ -110,16 +147,16 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
         }
 
         case OpCode::Mult:
-            counter->multiply(getValue());
+            multiply(*val, getValue());
             break;
 
         case OpCode::Print:
-            counter->output();
+            std::cout << *val << '\n';
             break;
 
         case OpCode::Ret:
             if (frames.empty()) {
-                return counter;
+                return val;
             }
             else {
                 instIndex = frames.back().instIndex;
@@ -128,9 +165,9 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
             break;
 
         case OpCode::RetOnFailure:
-            if (counter == std::nullopt) {
+            if (val == std::nullopt) {
                 if (frames.empty()) {
-                    return counter;
+                    return val;
                 }
                 else {
                     instIndex = frames.back().instIndex;
@@ -140,15 +177,15 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
             break;
 
         case OpCode::SubJump: {
-            auto val = getValue();
+            auto toSub = getValue();
             auto jumpIndex = getAddress();
 
-            if (!counter->sub(val)) {
+            if (!subtract(*val, toSub)) {
                 if (frames.empty()) {
-                    counter = initialVal;
+                    val = initialVal;
                 }
                 else {
-                    counter = frames.back().counter;
+                    val = frames.back().val;
                 }
                 instIndex = jumpIndex;
             }
@@ -156,10 +193,10 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
         }
 
         case OpCode::SubRet:
-            if (!counter->sub(getValue())) {
-                counter = std::nullopt;
+            if (!subtract(*val, getValue())) {
+                val = std::nullopt;
                 if (frames.empty()) {
-                    return counter;
+                    return val;
                 }
                 else {
                     instIndex = frames.back().instIndex;
@@ -171,14 +208,17 @@ std::optional<Counter> getResult(const BytecodeModule &bytecode, Counter initial
         case OpCode::TailCall:
             instIndex = getAddress();
             if (frames.empty()) {
-                initialVal = *counter;
+                initialVal = *val;
             }
             else {
-                frames.back().counter = *counter;
+                frames.back().val = *val;
             }
             break;
         }
     }
 }
+
+template std::optional<uint64_t> getResult<uint64_t>(const BytecodeModule &bytecode, uint64_t initialVal);
+template std::optional<BigInt> getResult<BigInt>(const BytecodeModule &bytecode, BigInt initialVal);
 
 } // namespace unacpp

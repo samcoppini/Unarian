@@ -21,22 +21,32 @@ public:
     uint32_t getAmount() const;
 };
 
-class MultiplyProgram {
+class DivideProgram {
+public:
+    enum class Remainder {
+        Fail,
+        Floor,
+    };
+
 private:
-    uint32_t amount_;
+    uint32_t divisor_;
+
+    Remainder remainder_;
 
 public:
-    MultiplyProgram(uint32_t amount);
+    DivideProgram(uint32_t divisor, Remainder remainder);
 
-    uint32_t getAmount() const;
+    uint32_t getDivisor() const;
+
+    Remainder getRemainderBehavior() const;
 };
 
-class SubtractProgram {
+class EqualProgram {
 private:
     uint32_t amount_;
 
 public:
-    SubtractProgram(uint32_t amount);
+    EqualProgram(uint32_t amount);
 
     uint32_t getAmount() const;
 };
@@ -51,11 +61,36 @@ public:
     const std::string &getFuncName() const;
 };
 
+class MultiplyProgram {
+private:
+    uint32_t amount_;
+
+public:
+    MultiplyProgram(uint32_t amount);
+
+    uint32_t getAmount() const;
+};
+
+class NotProgram {};
+
+class SubtractProgram {
+private:
+    uint32_t amount_;
+
+public:
+    SubtractProgram(uint32_t amount);
+
+    uint32_t getAmount() const;
+};
+
 using Instruction = std::variant<
     AddProgram,
     DebugPrint,
+    DivideProgram,
+    EqualProgram,
     FuncCall,
     MultiplyProgram,
+    NotProgram,
     SubtractProgram
 >;
 

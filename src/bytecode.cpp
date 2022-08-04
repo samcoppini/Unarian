@@ -25,7 +25,11 @@ bool funcCallCanFail(const ProgramMap &programs, const std::string &funcName, Fu
 
 bool branchCanFail(const ProgramMap &programs, const Branch &branch, std::unordered_map<std::string, bool> &funcsFail) {
     for (auto &inst: branch.getInstructions()) {
-        if (std::holds_alternative<SubtractProgram>(inst)) {
+        if (std::holds_alternative<SubtractProgram>(inst) ||
+            std::holds_alternative<EqualProgram>(inst) ||
+            (std::holds_alternative<DivideProgram>(inst) &&
+             std::get<DivideProgram>(inst).getRemainderBehavior() == DivideProgram::Remainder::Fail))
+        {
             return true;
         }
         else if (auto func = std::get_if<FuncCall>(&inst); func) {
@@ -94,6 +98,37 @@ void generateBranch(
         else if (auto mult = std::get_if<MultiplyProgram>(&inst); mult) {
             bytecode.push_back(OpCode::Mult);
             addValue(mult->getAmount());
+        }
+        else if (auto div = std::get_if<DivideProgram>(&inst); div) {
+            if (div->getRemainderBehavior() == DivideProgram::Remainder::Floor) {
+                bytecode.push_back(OpCode::DivFloor);
+                addValue(div->getDivisor());
+            }
+            else if (lastBranch) {
+                bytecode.push_back(OpCode::DivRet);
+                addValue(div->getDivisor());
+            }
+            else {
+                bytecode.push_back(OpCode::DivJump);
+                addValue(div->getDivisor());
+                nextBranchReferences.push_back(bytecode.size());
+                addPlaceholderAddress();
+            }
+        }
+        else if (std::holds_alternative<NotProgram>(inst)) {
+            bytecode.push_back(OpCode::Not);
+        }
+        else if (auto eq = std::get_if<EqualProgram>(&inst); eq) {
+            if (lastBranch) {
+                bytecode.push_back(OpCode::NotEqualRet);
+                addValue(eq->getAmount());
+            }
+            else {
+                bytecode.push_back(OpCode::NotEqualJump);
+                addValue(eq->getAmount());
+                nextBranchReferences.push_back(bytecode.size());
+                addPlaceholderAddress();
+            }
         }
         else if (auto sub = std::get_if<SubtractProgram>(&inst); sub) {
             if (sub->getAmount() == 1) {
@@ -172,7 +207,10 @@ void generateProgram(
 std::vector<size_t> argumentSizes(OpCode opcode) {
     switch (opcode) {
         case OpCode::Add:
+        case OpCode::DivFloor:
+        case OpCode::DivRet:
         case OpCode::Mult:
+        case OpCode::NotEqualRet:
         case OpCode::SubRet:
             return { 2 };
 
@@ -183,6 +221,8 @@ std::vector<size_t> argumentSizes(OpCode opcode) {
         case OpCode::TailCall:
             return { 4 };
 
+        case OpCode::DivJump:
+        case OpCode::NotEqualJump:
         case OpCode::SubJump:
             return { 2, 4 };
 
@@ -197,10 +237,16 @@ std::string_view opcodeName(OpCode opcode) {
         case OpCode::Call:          return "CALL";
         case OpCode::DecJump:       return "DEC_JMP";
         case OpCode::DecRet:        return "DEC_RET";
+        case OpCode::DivFloor:      return "DIV_FLOOR";
+        case OpCode::DivJump:       return "DIV_JUMP";
+        case OpCode::DivRet:        return "DIV_RET";
         case OpCode::Inc:           return "INC";
         case OpCode::Jump:          return "JMP";
         case OpCode::JumpOnFailure: return "FAIL_JMP";
         case OpCode::Mult:          return "MULT";
+        case OpCode::Not:           return "NOT";
+        case OpCode::NotEqualJump:  return "NOT_EQ_JMP";
+        case OpCode::NotEqualRet:   return "NOT_EQ_RET";
         case OpCode::Print:         return "PRINT";
         case OpCode::Ret:           return "RET";
         case OpCode::RetOnFailure:  return "FAIL_RET";

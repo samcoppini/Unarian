@@ -30,6 +30,19 @@ void add(BigInt &num, BigInt addend) {
     num += addend;
 }
 
+bool divide(BigInt &num, uint64_t divisor) {
+    BigInt rem = num % divisor;
+    BigInt result = num / divisor;
+    num = result;
+    return rem == 0;
+}
+
+bool divide(uint64_t &num, uint64_t divisor) {
+    auto rem = num % divisor;
+    num /= divisor;
+    return rem == 0;
+}
+
 void multiply(uint64_t &num, uint64_t factor) {
     num *= factor;
 }
@@ -123,6 +136,39 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             }
             break;
 
+        case OpCode::DivFloor:
+            divide(*val, getValue());
+            break;
+
+        case OpCode::DivJump: {
+            auto divisor = getValue();
+            auto jumpIndex = getAddress();
+
+            if (!divide(*val, divisor)) {
+                if (frames.empty()) {
+                    val = initialVal;
+                }
+                else {
+                    val = frames.back().val;
+                }
+                instIndex = jumpIndex;
+            }
+            break;
+        }
+
+        case OpCode::DivRet:
+            if (!divide(*val, getValue())) {
+                val = std::nullopt;
+                if (frames.empty()) {
+                    return val;
+                }
+                else {
+                    instIndex = frames.back().instIndex;
+                    frames.pop_back();
+                }
+            }
+            break;
+
         case OpCode::Inc:
             add(*val, 1);
             break;
@@ -149,6 +195,49 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
         case OpCode::Mult:
             multiply(*val, getValue());
             break;
+
+        case OpCode::Not:
+            if (*val == 0) {
+                val = 1;
+            }
+            else {
+                val = 0;
+            }
+            break;
+
+        case OpCode::NotEqualJump: {
+            auto eq = getValue();
+            auto jumpIndex = getAddress();
+
+            if (*val != eq) {
+                if (frames.empty()) {
+                    val = initialVal;
+                }
+                else {
+                    val = frames.back().val;
+                }
+                instIndex = jumpIndex;
+            }
+
+            break;
+        }
+
+        case OpCode::NotEqualRet: {
+            auto eq = getValue();
+
+            if (*val != eq) {
+                val = std::nullopt;
+                if (frames.empty()) {
+                    return val;
+                }
+                else {
+                    instIndex = frames.back().instIndex;
+                    frames.pop_back();
+                }
+            }
+
+            break;
+        }
 
         case OpCode::Print:
             std::cout << *val << '\n';

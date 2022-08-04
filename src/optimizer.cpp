@@ -1,7 +1,8 @@
 #include "optimizer.hpp"
 
-#include <type_traits>
 #include <optional>
+#include <type_traits>
+#include <utility>
 
 namespace unacpp {
 
@@ -194,11 +195,137 @@ std::optional<uint32_t> checkMultiply(const Program &program, const std::string 
     return std::get<AddProgram>(multInsts[2]).getAmount();
 }
 
-void findMultiplies(ProgramMap &programs) {
+bool checkNot(const Program &program) {
+    auto branches = program.getBranches();
+    if (branches.size() != 2) {
+        return false;
+    }
+
+    auto firstBranchInsts = branches[0].getInstructions();
+    if (firstBranchInsts.size() != 2) {
+        return false;
+    }
+
+    if (!std::holds_alternative<SubtractProgram>(firstBranchInsts[0]) ||
+        std::get<SubtractProgram>(firstBranchInsts[0]).getAmount() != 1)
+    {
+        return false;
+    }
+
+    if (!std::holds_alternative<MultiplyProgram>(firstBranchInsts[1]) ||
+        std::get<MultiplyProgram>(firstBranchInsts[1]).getAmount() != 0)
+    {
+        return false;
+    }
+
+    auto secondBranchInsts = branches[1].getInstructions();
+    if (secondBranchInsts.size() != 1) {
+        return false;
+    }
+
+    if (!std::holds_alternative<AddProgram>(secondBranchInsts[0]) ||
+        std::get<AddProgram>(secondBranchInsts[0]).getAmount() != 1)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+std::optional<uint32_t> checkIfEqual(const Program &program) {
+    auto branches = program.getBranches();
+    if (branches.size() != 1) {
+        return std::nullopt;
+    }
+
+    auto branchInsts = branches[0].getInstructions();
+    if (branchInsts.size() != 2) {
+        return std::nullopt;
+    }
+
+    if (!std::holds_alternative<NotProgram>(branchInsts[0]) ||
+        !std::holds_alternative<SubtractProgram>(branchInsts[1]) ||
+        std::get<SubtractProgram>(branchInsts[1]).getAmount() != 1)
+    {
+        return std::nullopt;
+    }
+
+    return 0;
+}
+
+std::optional<std::pair<uint32_t, DivideProgram::Remainder>> checkDivision(const Program &program, const std::string &funcName) {
+    auto branches = program.getBranches();
+    if (branches.size() != 2) {
+        return std::nullopt;
+    }
+
+    auto firstInsts = branches[0].getInstructions();
+    if (firstInsts.size() != 3) {
+        return std::nullopt;
+    }
+
+    if (!std::holds_alternative<SubtractProgram>(firstInsts[0])) {
+        return std::nullopt;
+    }
+
+    auto divisor = std::get<SubtractProgram>(firstInsts[0]).getAmount();
+
+    if (!std::holds_alternative<FuncCall>(firstInsts[1]) ||
+        std::get<FuncCall>(firstInsts[1]).getFuncName() != funcName)
+    {
+        return std::nullopt;
+    }
+
+    if (!std::holds_alternative<AddProgram>(firstInsts[2]) ||
+        std::get<AddProgram>(firstInsts[2]).getAmount() != 1)
+    {
+        return std::nullopt;
+    }
+
+    auto secondInsts = branches[1].getInstructions();
+    if (secondInsts.size() != 1) {
+        return std::nullopt;
+    }
+
+    if (std::holds_alternative<MultiplyProgram>(secondInsts[0]) &&
+        std::get<MultiplyProgram>(secondInsts[0]).getAmount() == 0)
+    {
+        return {{ divisor, DivideProgram::Remainder::Floor }};
+    }
+
+    if (std::holds_alternative<EqualProgram>(secondInsts[0]) &&
+        std::get<EqualProgram>(secondInsts[0]).getAmount() == 0)
+    {
+        return {{ divisor, DivideProgram::Remainder::Fail }};
+    }
+
+    return std::nullopt;
+}
+
+void simplifyFunctions(ProgramMap &programs) {
     for (auto &[name, prog]: programs) {
         auto factor = checkMultiply(prog, name);
         if (factor != std::nullopt) {
             prog = Program{{Branch{{MultiplyProgram{*factor}}}}};
+            continue;
+        }
+
+        auto divide = checkDivision(prog, name);
+        if (divide != std::nullopt) {
+            auto [divisor, failBehavior] = *divide;
+            prog = Program{{Branch{{DivideProgram{divisor, failBehavior}}}}};
+            continue;
+        }
+
+        auto eq = checkIfEqual(prog);
+        if (eq != std::nullopt) {
+            prog = Program{{Branch{{EqualProgram{*eq}}}}};
+            continue;
+        }
+
+        if (checkNot(prog)) {
+            prog = Program{{Branch{{NotProgram{}}}}};
+            continue;
         }
     }
 }
@@ -212,7 +339,7 @@ ProgramMap optimizePrograms(ProgramMap programs) {
         keepOptimizing = inlinePrograms(programs);
         if (keepOptimizing) {
             condenseMath(programs);
-            findMultiplies(programs);
+            simplifyFunctions(programs);
         }
     }
 

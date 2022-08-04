@@ -10,6 +10,27 @@ uint32_t AddProgram::getAmount() const {
     return amount_;
 }
 
+DivideProgram::DivideProgram(uint32_t divisor, Remainder remainder)
+    : divisor_(divisor)
+    , remainder_(remainder)
+{}
+
+uint32_t DivideProgram::getDivisor() const {
+    return divisor_;
+}
+
+DivideProgram::Remainder DivideProgram::getRemainderBehavior() const {
+    return remainder_;
+}
+
+EqualProgram::EqualProgram(uint32_t amount)
+    : amount_(amount)
+{}
+
+uint32_t EqualProgram::getAmount() const {
+    return amount_;
+}
+
 MultiplyProgram::MultiplyProgram(uint32_t amount)
     : amount_(amount)
 {}

@@ -35,7 +35,7 @@ void runInterpreter(const unacpp::BytecodeModule &bytecode, bool readInput) {
 int main(int argc, char **argv) {
     std::string filename;
     std::string expr = "main";
-    bool arbitraryPrecision = false;
+    bool fixedPrecision = false;
     bool readInput = false;
     bool debugMode = false;
     bool outputBytecode = false;
@@ -45,8 +45,8 @@ int main(int argc, char **argv) {
     app.add_option("file", filename, "The unarian file to interpret.")
        ->check(CLI::ExistingFile);
 
-    app.add_flag("-a,--arbitrary", arbitraryPrecision,
-                 "Use arbitrary precision math. Otherwise, the interpreter will only use a 64-bit integer.");
+    app.add_flag("-f,--fixed", fixedPrecision,
+                 "Use fixed, 64-bit precision math, instead of the default arbitrary precision.");
 
     app.add_flag("-g,--debug", debugMode, "Enables debug printing with the ! command.");
 
@@ -94,10 +94,10 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    if (arbitraryPrecision) {
-        runInterpreter<unacpp::BigInt>(bytecode, readInput);
+    if (fixedPrecision) {
+        runInterpreter<uint64_t>(bytecode, readInput);
     }
     else {
-        runInterpreter<uint64_t>(bytecode, readInput);
+        runInterpreter<unacpp::BigInt>(bytecode, readInput);
     }
 }

@@ -26,7 +26,7 @@ def run_test(exe_path: str, test_path: str) -> int:
     for input, output in inputs.items():
         input_bytes = bytes(input, 'utf-8')
 
-        proc = subprocess.run([exe_path, test_path, '-iag'], input=bytes(input, 'utf-8'), capture_output=True)
+        proc = subprocess.run([exe_path, test_path, '-ig'], input=bytes(input, 'utf-8'), capture_output=True)
         actual_output = proc.stdout
 
         print(f'Expected {output} for input {input}. Received {str(actual_output, "utf-8")}')

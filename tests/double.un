@@ -1,0 +1,9 @@
+double { - double + + | }
+
+main { double }
+
+# input: 0 -> 0
+# input: 1 -> 2
+# input: 2 -> 4
+# input: 50 -> 100
+# input: 11111111 -> 22222222

@@ -33,3 +33,5 @@ unarian_exe = executable(
     dependencies: cli11_dep,
     install: true,
 )
+
+subdir('tests')

@@ -53,11 +53,11 @@ Program inlineProgram(const Program &program, const ProgramMap &programs, bool &
     return Program{branches};
 }
 
-bool inlinePrograms(ProgramMap &programs) {
+bool inlinePrograms(ProgramMap &programs, const std::string &programName) {
     ProgramMap inlinablePrograms;
 
     for (auto it = programs.begin(); it != programs.end(); ) {
-        if (canInline(it->second)) {
+        if (canInline(it->second) && it->first != programName) {
             inlinablePrograms.insert(*it);
             it = programs.erase(it);
         }
@@ -72,7 +72,6 @@ bool inlinePrograms(ProgramMap &programs) {
         prog = inlineProgram(prog, inlinablePrograms, inlinedProgram);
     }
 
-    programs.insert(inlinablePrograms.begin(), inlinablePrograms.end());
     return inlinedProgram;
 }
 
@@ -332,11 +331,11 @@ void simplifyFunctions(ProgramMap &programs) {
 
 } // anonymous namespace
 
-ProgramMap optimizePrograms(ProgramMap programs) {
+ProgramMap optimizePrograms(ProgramMap programs, const std::string &programName) {
     bool keepOptimizing = true;
 
     while (keepOptimizing) {
-        keepOptimizing = inlinePrograms(programs);
+        keepOptimizing = inlinePrograms(programs, programName);
         if (keepOptimizing) {
             condenseMath(programs);
             simplifyFunctions(programs);

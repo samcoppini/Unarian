@@ -4,6 +4,6 @@
 
 namespace unacpp {
 
-ProgramMap optimizePrograms(ProgramMap programs);
+ProgramMap optimizePrograms(ProgramMap programs, const std::string &programName);
 
 } // namespace unacpp

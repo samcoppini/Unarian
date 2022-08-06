@@ -85,8 +85,8 @@ int main(int argc, char **argv) {
 
     const auto &programs = std::get<unacpp::ProgramMap>(fileParseResult);
 
-    auto optimizedPrograms = unacpp::optimizePrograms(programs);
     auto programName = parser.getExpressionName();
+    auto optimizedPrograms = unacpp::optimizePrograms(programs, programName);
 
     auto bytecode = unacpp::generateBytecode(optimizedPrograms, programName, debugMode);
     if (outputBytecode) {

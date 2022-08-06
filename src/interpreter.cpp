@@ -22,44 +22,26 @@ StackFrame<NumberType>::StackFrame(NumberType val, uint32_t instIndex)
     , instIndex(instIndex)
 {}
 
-void add(uint64_t &num, uint64_t addend) {
+template <typename NumberType>
+void add(NumberType &num, uint64_t addend) {
     num += addend;
 }
 
-void add(BigInt &num, BigInt addend) {
-    num += addend;
-}
-
-bool divide(BigInt &num, uint64_t divisor) {
-    BigInt rem = num % divisor;
-    BigInt result = num / divisor;
+template <typename NumberType>
+bool divide(NumberType &num, uint64_t divisor) {
+    NumberType rem = num % divisor;
+    NumberType result = num / divisor;
     num = result;
     return rem == 0;
 }
 
-bool divide(uint64_t &num, uint64_t divisor) {
-    auto rem = num % divisor;
-    num /= divisor;
-    return rem == 0;
-}
-
-void multiply(uint64_t &num, uint64_t factor) {
+template <typename NumberType>
+void multiply(NumberType &num, uint64_t factor) {
     num *= factor;
 }
 
-void multiply(BigInt &num, uint64_t factor) {
-    num *= factor;
-}
-
-bool subtract(uint64_t &num, uint64_t subtrahend) {
-    if (subtrahend > num) {
-        return false;
-    }
-    num -= subtrahend;
-    return true;
-}
-
-bool subtract(BigInt &num, uint64_t subtrahend) {
+template <typename NumberType>
+bool subtract(NumberType &num, uint64_t subtrahend) {
     if (subtrahend > num) {
         return false;
     }

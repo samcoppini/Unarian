@@ -157,7 +157,7 @@ void generateBranch(
         else if (auto call = std::get_if<FuncCall>(&inst); call) {
             bool callCanFail = funcCallCanFail(programs, call->getFuncName(), funcsFail);
 
-            if (lastInst && !callCanFail) {
+            if (lastInst && (!callCanFail || lastBranch)) {
                 bytecode.push_back(OpCode::TailCall);
             }
             else {

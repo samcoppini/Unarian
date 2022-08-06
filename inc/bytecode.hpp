@@ -17,7 +17,6 @@ enum OpCode: uint8_t {
     DivJump,
     DivRet,
     Inc,
-    Jump,
     JumpOnFailure,
     Mult,
     Not,

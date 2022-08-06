@@ -216,7 +216,6 @@ std::vector<size_t> argumentSizes(OpCode opcode) {
 
         case OpCode::Call:
         case OpCode::DecJump:
-        case OpCode::Jump:
         case OpCode::JumpOnFailure:
         case OpCode::TailCall:
             return { 4 };
@@ -241,7 +240,6 @@ std::string_view opcodeName(OpCode opcode) {
         case OpCode::DivJump:       return "DIV_JUMP";
         case OpCode::DivRet:        return "DIV_RET";
         case OpCode::Inc:           return "INC";
-        case OpCode::Jump:          return "JMP";
         case OpCode::JumpOnFailure: return "FAIL_JMP";
         case OpCode::Mult:          return "MULT";
         case OpCode::Not:           return "NOT";

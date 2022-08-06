@@ -173,10 +173,6 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             add(*val, 1);
             break;
 
-        case OpCode::Jump:
-            instIndex = getAddress();
-            break;
-
         case OpCode::JumpOnFailure: {
             auto jumpIndex = getAddress();
 

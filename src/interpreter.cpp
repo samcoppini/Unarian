@@ -61,7 +61,7 @@ bool subtract(NumberType &num, uint64_t subtrahend) {
 
 template <typename NumberType>
 std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType initialVal) {
-    std::vector<StackFrame<NumberType>> frames;
+    std::vector<StackFrame<NumberType>> frames = { { initialVal, 0 } };
     std::optional<NumberType> val = initialVal;
     uint32_t instIndex = 0;
 
@@ -102,12 +102,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             auto jumpIndex = getAddress();
 
             if (!subtract(*val, 1)) {
-                if (frames.empty()) {
-                    val = initialVal;
-                }
-                else {
-                    val = frames.back().val;
-                }
+                val = frames.back().val;
                 instIndex = jumpIndex;
             }
             break;
@@ -116,7 +111,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
         case OpCode::DecRet:
             if (!subtract(*val, 1)) {
                 val = std::nullopt;
-                if (frames.empty()) {
+                if (frames.size() == 1) {
                     return val;
                 }
                 else {
@@ -135,12 +130,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             auto jumpIndex = getAddress();
 
             if (!divide(*val, divisor)) {
-                if (frames.empty()) {
-                    val = initialVal;
-                }
-                else {
-                    val = frames.back().val;
-                }
+                val = frames.back().val;
                 instIndex = jumpIndex;
             }
             break;
@@ -149,7 +139,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
         case OpCode::DivRet:
             if (!divide(*val, getValue())) {
                 val = std::nullopt;
-                if (frames.empty()) {
+                if (frames.size() == 1) {
                     return val;
                 }
                 else {
@@ -167,12 +157,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             auto jumpIndex = getAddress();
 
             if (val == std::nullopt) {
-                if (frames.empty()) {
-                    val = initialVal;
-                }
-                else {
-                    val = frames.back().val;
-                }
+                val = frames.back().val;
                 instIndex = jumpIndex;
             }
             break;
@@ -196,12 +181,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             auto jumpIndex = getAddress();
 
             if (*val != eq) {
-                if (frames.empty()) {
-                    val = initialVal;
-                }
-                else {
-                    val = frames.back().val;
-                }
+                val = frames.back().val;
                 instIndex = jumpIndex;
             }
 
@@ -213,7 +193,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
 
             if (*val != eq) {
                 val = std::nullopt;
-                if (frames.empty()) {
+                if (frames.size() == 1) {
                     return val;
                 }
                 else {
@@ -230,7 +210,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             break;
 
         case OpCode::Ret:
-            if (frames.empty()) {
+            if (frames.size() == 1) {
                 return val;
             }
             else {
@@ -241,7 +221,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
 
         case OpCode::RetOnFailure:
             if (val == std::nullopt) {
-                if (frames.empty()) {
+                if (frames.size() == 1) {
                     return val;
                 }
                 else {
@@ -256,12 +236,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             auto jumpIndex = getAddress();
 
             if (!subtract(*val, toSub)) {
-                if (frames.empty()) {
-                    val = initialVal;
-                }
-                else {
-                    val = frames.back().val;
-                }
+                val = frames.back().val;
                 instIndex = jumpIndex;
             }
             break;
@@ -270,7 +245,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
         case OpCode::SubRet:
             if (!subtract(*val, getValue())) {
                 val = std::nullopt;
-                if (frames.empty()) {
+                if (frames.size() == 1) {
                     return val;
                 }
                 else {
@@ -282,12 +257,7 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
 
         case OpCode::TailCall:
             instIndex = getAddress();
-            if (frames.empty()) {
-                initialVal = *val;
-            }
-            else {
-                frames.back().val = *val;
-            }
+            frames.back().val = *val;
             break;
         }
     }

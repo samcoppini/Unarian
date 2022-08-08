@@ -1,0 +1,96 @@
+# This program is based on Project Euler problem #31. The problem is:
+#
+# In the United Kingdom the currency is made up of pound (£) and pence (p).
+#
+# There are eight coins in general circulation:
+#    1p, 2p, 5p, 10p, 20p, 50p, £1 (100p), and £2 (200p).
+#
+# It is possible to make £2 in the following way:
+#    1×£1 + 1×50p + 2×20p + 1×5p + 1×2p + 3×1p
+#
+# How many different ways can £2 be made using any number of coins?
+
+# This program uses a scheme where the state of the program is stored as
+# (3 ^ i) * (2 ^ o), where "i" is the input number of coins that is being
+# calculated, and "o" is the calculated number of ways to make change.
+
+# By some miracle, this actually calculates the correct answer in less than
+# ten seconds when using the release version of the C++ interpreter. I was
+# prepared to leave this running for an hour.
+
+0 { - 0 | }
+
+if=0 { { - 0 | + } - }
+if=1 { - if=0 + }
+
+if/3 { - - - if/3 + | if=0 }
+*3 { - *3 + + + | }
+3^x { - 3^x *3 | + }
+3^x->3^0 { if/3 3^x->3^0 | }
+
+if/2 { - - if/2 + | if=0 }
+*2 { - *2 + + | }
+log2 { if/2 log2 + | if=1 - }
+
+input-1 { if/3 }
+input-2 { if/3 if/3 }
+input-5 { if/3 if/3 if/3 if/3 if/3 }
+input-10 { input-5 input-5 }
+input-20 { input-10 input-10 }
+input-50 { input-20 input-20 input-10 }
+input-100 { input-50 input-50 }
+input-200 { input-100 input-100 }
+
+input+1 { *3 }
+input+2 { *3 *3 }
+input+5 { *3 *3 *3 *3 *3 }
+input+10 { input+5 input+5 }
+input+20 { input+10 input+10 }
+input+50 { input+20 input+20 input+10 }
+input+100 { input+50 input+50 }
+input+200 { input+100 input+100 }
+
+output+1 { *2 }
+
+coin_sum_helper_200 {
+    input-200 coin_sum_helper_200 input+200 coin_sum_helper_100
+    | coin_sum_helper_100
+}
+
+coin_sum_helper_100 {
+    input-100 coin_sum_helper_100 input+100 coin_sum_helper_50
+    | coin_sum_helper_50
+}
+
+coin_sum_helper_50 {
+    input-50 coin_sum_helper_50 input+50 coin_sum_helper_20
+    | coin_sum_helper_20
+}
+
+coin_sum_helper_20 {
+    input-20 coin_sum_helper_20 input+20 coin_sum_helper_10
+    | coin_sum_helper_10
+}
+
+coin_sum_helper_10 {
+    input-10 coin_sum_helper_10 input+10 coin_sum_helper_5
+    | coin_sum_helper_5
+}
+
+coin_sum_helper_5 {
+    input-5 coin_sum_helper_5 input+5 coin_sum_helper_2
+    | coin_sum_helper_2
+}
+
+coin_sum_helper_2 {
+    input-2 coin_sum_helper_2 input+2 coin_sum_helper_1
+    | coin_sum_helper_1
+}
+
+coin_sum_helper_1 {
+    output+1
+}
+
+coin_sums { 3^x coin_sum_helper_200 3^x->3^0 log2 }
+
+main { coin_sums }

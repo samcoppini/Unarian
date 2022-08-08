@@ -1,0 +1,30 @@
+0 { - 0 | }
+
+if=0 { { - 0 | + } - }
+
+-10 { - - - - - - - - - - }
++10 { + + + + + + + + + + }
+/10 { -10 /10 + | 0 }
+*10 { - *10 +10 | }
+>10 { -10 +10 }
+
+if_mod10=0 { -10 if_mod10=0 +10 | if=0 }
+
+# Computes the digit sum of number in base 10
+digit_sum {
+    if=0 |
+    if_mod10=0 /10 digit_sum |
+    - if_mod10=0 /10 digit_sum + |
+    - - if_mod10=0 /10 digit_sum + + |
+    - - - if_mod10=0 /10 digit_sum + + + |
+    - - - - if_mod10=0 /10 digit_sum + + + + |
+    - - - - - if_mod10=0 /10 digit_sum + + + + + |
+    - - - - - - if_mod10=0 /10 digit_sum + + + + + + |
+    - - - - - - - if_mod10=0 /10 digit_sum + + + + + + + |
+    - - - - - - - - if_mod10=0 /10 digit_sum + + + + + + + + |
+    /10 digit_sum + + + + + + + + + |
+}
+
+digital_root { >10 digit_sum digital_root | }
+
+main { digit_sum }

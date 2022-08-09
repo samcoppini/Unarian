@@ -39,6 +39,19 @@ uint32_t EqualProgram::getAmount() const {
     return amount_;
 }
 
+FuncCall::FuncCall(std::string_view funcName, FilePosition pos)
+    : funcName_(funcName)
+    , pos_(pos)
+{}
+
+const std::string &FuncCall::getFuncName() const {
+    return funcName_;
+}
+
+const FilePosition &FuncCall::getPos() const {
+    return pos_;
+}
+
 MultiplyProgram::MultiplyProgram(uint32_t amount)
     : amount_(amount)
 {}
@@ -53,14 +66,6 @@ SubtractProgram::SubtractProgram(uint32_t amount)
 
 uint32_t SubtractProgram::getAmount() const {
     return amount_;
-}
-
-FuncCall::FuncCall(std::string_view funcName)
-    : funcName_(funcName)
-{}
-
-const std::string &FuncCall::getFuncName() const {
-    return funcName_;
 }
 
 Branch::Branch(std::vector<Instruction> instructions)

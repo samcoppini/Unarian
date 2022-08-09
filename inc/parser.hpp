@@ -62,6 +62,10 @@ private:
 
     void parseFilePrograms();
 
+    void checkForUndefinedPrograms(const Branch &branch);
+
+    void checkForUndefinedPrograms();
+
 public:
     Parser(std::string_view fileContent, std::string_view expr);
 

@@ -60,11 +60,11 @@ Branch Parser::parseBranch() {
             if (program != std::nullopt) {
                 auto progName = getAnonymousProgramName();
                 programs_.insert({progName, *program});
-                instructions.push_back(FuncCall{progName});
+                instructions.push_back(FuncCall{progName, token->pos});
             }
         }
         else {
-            instructions.push_back(FuncCall{token->content});
+            instructions.push_back(FuncCall{token->content, token->pos});
         }
     }
 
@@ -146,6 +146,23 @@ void Parser::parseFilePrograms() {
     }
 }
 
+void Parser::checkForUndefinedPrograms(const Branch &branch) {
+    for (auto &inst: branch.getInstructions()) {
+        auto *func = std::get_if<FuncCall>(&inst);
+        if (func && !programs_.count(func->getFuncName())) {
+            errors_.emplace_back(func->getPos(), "Undefined program: " + std::string{func->getFuncName()});
+        }
+    }
+}
+
+void Parser::checkForUndefinedPrograms() {
+    for (auto &progIter: programs_) {
+        for (auto &branch: progIter.second.getBranches()) {
+            checkForUndefinedPrograms(branch);
+        }
+    }
+}
+
 Parser::Parser(std::string_view fileContent, std::string_view expr)
     : tokens_(getTokens(fileContent))
     , index_(0)
@@ -156,6 +173,7 @@ Parser::Parser(std::string_view fileContent, std::string_view expr)
 
     parseFilePrograms();
     parseExpression(expr);
+    checkForUndefinedPrograms();
 }
 
 const std::string &Parser::getExpressionName() const {

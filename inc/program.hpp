@@ -8,10 +8,12 @@
 
 #pragma once
 
-#include <unordered_map>
+#include "position.hpp"
+
 #include <span>
-#include <string>
 #include <string_view>
+#include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -63,10 +65,14 @@ class FuncCall {
 private:
     std::string funcName_;
 
+    FilePosition pos_;
+
 public:
-    FuncCall(std::string_view funcName);
+    FuncCall(std::string_view funcName, FilePosition pos);
 
     const std::string &getFuncName() const;
+
+    const FilePosition &getPos() const;
 };
 
 class MultiplyProgram {

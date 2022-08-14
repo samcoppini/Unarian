@@ -98,26 +98,15 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             break;
         }
 
-        case OpCode::DecJump: {
-            auto jumpIndex = getAddress();
-
-            if (!subtract(*val, 1)) {
-                val = frames.back().val;
-                instIndex = jumpIndex;
-            }
-            break;
-        }
-
-        case OpCode::DecRet:
+        case OpCode::Dec:
             if (!subtract(*val, 1)) {
                 val = std::nullopt;
-                if (frames.size() == 1) {
-                    return val;
-                }
-                else {
-                    instIndex = frames.back().instIndex;
-                    frames.pop_back();
-                }
+            }
+            break;
+
+        case OpCode::DivFail:
+            if (!divide(*val, getValue())) {
+                val = std::nullopt;
             }
             break;
 
@@ -125,27 +114,9 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             divide(*val, getValue());
             break;
 
-        case OpCode::DivJump: {
-            auto divisor = getValue();
-            auto jumpIndex = getAddress();
-
-            if (!divide(*val, divisor)) {
-                val = frames.back().val;
-                instIndex = jumpIndex;
-            }
-            break;
-        }
-
-        case OpCode::DivRet:
-            if (!divide(*val, getValue())) {
+        case OpCode::Equal:
+            if (*val != getValue()) {
                 val = std::nullopt;
-                if (frames.size() == 1) {
-                    return val;
-                }
-                else {
-                    instIndex = frames.back().instIndex;
-                    frames.pop_back();
-                }
             }
             break;
 
@@ -176,35 +147,6 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             }
             break;
 
-        case OpCode::NotEqualJump: {
-            auto eq = getValue();
-            auto jumpIndex = getAddress();
-
-            if (*val != eq) {
-                val = frames.back().val;
-                instIndex = jumpIndex;
-            }
-
-            break;
-        }
-
-        case OpCode::NotEqualRet: {
-            auto eq = getValue();
-
-            if (*val != eq) {
-                val = std::nullopt;
-                if (frames.size() == 1) {
-                    return val;
-                }
-                else {
-                    instIndex = frames.back().instIndex;
-                    frames.pop_back();
-                }
-            }
-
-            break;
-        }
-
         case OpCode::Print:
             std::cout << *val << '\n';
             break;
@@ -231,27 +173,9 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
             }
             break;
 
-        case OpCode::SubJump: {
-            auto toSub = getValue();
-            auto jumpIndex = getAddress();
-
-            if (!subtract(*val, toSub)) {
-                val = frames.back().val;
-                instIndex = jumpIndex;
-            }
-            break;
-        }
-
-        case OpCode::SubRet:
+        case OpCode::Sub:
             if (!subtract(*val, getValue())) {
                 val = std::nullopt;
-                if (frames.size() == 1) {
-                    return val;
-                }
-                else {
-                    instIndex = frames.back().instIndex;
-                    frames.pop_back();
-                }
             }
             break;
 

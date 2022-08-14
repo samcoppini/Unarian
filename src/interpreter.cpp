@@ -15,41 +15,35 @@ namespace unacpp {
 
 namespace {
 
-template <typename NumberType>
 struct StackFrame {
-    StackFrame(NumberType val, uint32_t instIndex);
+    StackFrame(BigInt val, uint32_t instIndex);
 
-    NumberType val;
+    BigInt val;
 
     size_t instIndex;
 };
 
-template <typename NumberType>
-StackFrame<NumberType>::StackFrame(NumberType val, uint32_t instIndex)
-    : val(val)
+StackFrame::StackFrame(BigInt val, uint32_t instIndex)
+    : val(std::move(val))
     , instIndex(instIndex)
 {}
 
-template <typename NumberType>
-void add(NumberType &num, uint64_t addend) {
+void add(BigInt &num, uint64_t addend) {
     num += addend;
 }
 
-template <typename NumberType>
-bool divide(NumberType &num, uint64_t divisor) {
-    NumberType rem = num % divisor;
-    NumberType result = num / divisor;
+bool divide(BigInt &num, uint64_t divisor) {
+    BigInt rem = num % divisor;
+    BigInt result = num / divisor;
     num = result;
     return rem == 0;
 }
 
-template <typename NumberType>
-void multiply(NumberType &num, uint64_t factor) {
+void multiply(BigInt &num, uint64_t factor) {
     num *= factor;
 }
 
-template <typename NumberType>
-bool subtract(NumberType &num, uint64_t subtrahend) {
+bool subtract(BigInt &num, uint64_t subtrahend) {
     if (subtrahend > num) {
         return false;
     }
@@ -59,10 +53,9 @@ bool subtract(NumberType &num, uint64_t subtrahend) {
 
 } // anonymous namespace
 
-template <typename NumberType>
-std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType initialVal) {
-    std::vector<StackFrame<NumberType>> frames = { { initialVal, 0 } };
-    std::optional<NumberType> val = initialVal;
+std::optional<BigInt> getResult(const BytecodeModule &bytecode, BigInt initialVal) {
+    std::vector<StackFrame> frames = { { initialVal, 0 } };
+    std::optional<BigInt> val = initialVal;
     uint32_t instIndex = 0;
 
     auto getByte = [&] {
@@ -186,8 +179,5 @@ std::optional<NumberType> getResult(const BytecodeModule &bytecode, NumberType i
         }
     }
 }
-
-template std::optional<uint64_t> getResult<uint64_t>(const BytecodeModule &bytecode, uint64_t initialVal);
-template std::optional<BigInt> getResult<BigInt>(const BytecodeModule &bytecode, BigInt initialVal);
 
 } // namespace unacpp

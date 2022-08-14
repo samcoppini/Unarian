@@ -15,8 +15,7 @@
 #include <iostream>
 #include <fstream>
 
-template <typename T>
-void printResult(const std::optional<T> &result) {
+void printResult(const std::optional<unacpp::BigInt> &result) {
     if (result == std::nullopt) {
         std::cout << "-\n";
     }
@@ -25,25 +24,23 @@ void printResult(const std::optional<T> &result) {
     }
 }
 
-template <typename T>
 void runInterpreter(const unacpp::BytecodeModule &bytecode, bool readInput) {
     if (readInput) {
         while (std::cin) {
-            T num;
+            unacpp::BigInt num;
             if (std::cin >> num) {
                 printResult(unacpp::getResult(bytecode, num));
             }
         }
     }
     else {
-        printResult(unacpp::getResult(bytecode, T{0}));
+        printResult(unacpp::getResult(bytecode, unacpp::BigInt{}));
     }
 }
 
 int main(int argc, char **argv) {
     std::string filename;
     std::string expr = "main";
-    bool fixedPrecision = false;
     bool readInput = false;
     bool debugMode = false;
     bool outputBytecode = false;
@@ -52,9 +49,6 @@ int main(int argc, char **argv) {
 
     app.add_option("file", filename, "The unarian file to interpret.")
        ->check(CLI::ExistingFile);
-
-    app.add_flag("-f,--fixed", fixedPrecision,
-                 "Use fixed, 64-bit precision math, instead of the default arbitrary precision.");
 
     app.add_flag("-g,--debug", debugMode, "Enables debug printing with the ! command.");
 
@@ -102,10 +96,5 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    if (fixedPrecision) {
-        runInterpreter<uint64_t>(bytecode, readInput);
-    }
-    else {
-        runInterpreter<unacpp::BigInt>(bytecode, readInput);
-    }
+    runInterpreter(bytecode, readInput);
 }

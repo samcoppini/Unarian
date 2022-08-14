@@ -8,13 +8,10 @@
 
 #pragma once
 
-#include "bigint.hpp"
-#include "bytecode.hpp"
-
-#include <optional>
+#include <boost/multiprecision/cpp_int.hpp>
 
 namespace unacpp {
 
-std::optional<BigInt> getResult(const BytecodeModule &bytecode, BigInt initialVal);
+using BigInt = boost::multiprecision::cpp_int;
 
 } // namespace unacpp

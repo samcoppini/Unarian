@@ -85,9 +85,24 @@ void generateBranch(
         bytecode.insert(bytecode.end(), 4, 255);
     };
 
-    auto addValue = [&] (uint16_t val) {
-        bytecode.push_back((val & 0xFF00) >> 8);
-        bytecode.push_back((val & 0x00FF) >> 0);
+    auto addValue = [&] (BigInt val) {
+        if (val <= 255) {
+            bytecode.push_back(val.convert_to<uint8_t>());
+        }
+        else {
+            auto insertIndex = bytecode.size();
+            auto firstByte = true;
+            bytecode.back()++;
+            while (val > 0) {
+                uint8_t newByte = (val & 0x7F).convert_to<uint8_t>();
+                if (!firstByte) {
+                    newByte |= 0x80;
+                }
+                bytecode.insert(bytecode.begin() + insertIndex, newByte);
+                val >>= 7;
+                firstByte = false;
+            }
+        }
     };
 
     for (size_t i = 0; i < instructions.size(); i++) {
@@ -201,12 +216,21 @@ void generateProgram(
 
 std::vector<size_t> argumentSizes(OpCode opcode) {
     switch (opcode) {
+        case OpCode::AddLong:
+        case OpCode::DivFailLong:
+        case OpCode::DivFloorLong:
+        case OpCode::EqualLong:
+        case OpCode::MultLong:
+        case OpCode::SubLong:
+            return { 0 };
+
         case OpCode::Add:
         case OpCode::DivFail:
+        case OpCode::DivFloor:
         case OpCode::Equal:
         case OpCode::Mult:
         case OpCode::Sub:
-            return { 2 };
+            return { 1 };
 
         case OpCode::Call:
         case OpCode::JumpOnFailure:
@@ -221,19 +245,25 @@ std::vector<size_t> argumentSizes(OpCode opcode) {
 std::string_view opcodeName(OpCode opcode) {
     switch (opcode) {
         case OpCode::Add:           return "ADD";
+        case OpCode::AddLong:       return "ADD";
         case OpCode::Call:          return "CALL";
         case OpCode::Dec:           return "DEC";
         case OpCode::DivFail:       return "DIV_FAIL";
+        case OpCode::DivFailLong:   return "DIV_FAIL";
         case OpCode::DivFloor:      return "DIV_FLOOR";
+        case OpCode::DivFloorLong:  return "DIV_FLOOR";
         case OpCode::Equal:         return "EQ";
+        case OpCode::EqualLong:     return "EQ";
         case OpCode::Inc:           return "INC";
         case OpCode::JumpOnFailure: return "FAIL_JMP";
         case OpCode::Mult:          return "MULT";
+        case OpCode::MultLong:      return "MULT";
         case OpCode::Not:           return "NOT";
         case OpCode::Print:         return "PRINT";
         case OpCode::Ret:           return "RET";
         case OpCode::RetOnFailure:  return "FAIL_RET";
         case OpCode::Sub:           return "SUB";
+        case OpCode::SubLong:       return "SUB";
         case OpCode::TailCall:      return "TAIL_CALL";
         default:                    return "ERROR";
     }
@@ -274,9 +304,19 @@ std::string bytecodeToString(const BytecodeModule &bytecode) {
         for (auto argSize: argSizes) {
             stream << ' ';
 
-            uint32_t argument = 0;
-            for (size_t j = 0; j < argSize; j++) {
-                argument = (argument << 8) | bytecode[++i];
+            BigInt argument = 0;
+            if (argSize == 0) {
+                uint8_t argByte = 0x80;
+                while (argByte & 0x80) {
+                    argByte = bytecode[++i];
+                    argument <<= 7;
+                    argument |= (argByte & 0x7F);
+                }
+            }
+            else {
+                for (size_t j = 0; j < argSize; j++) {
+                    argument = (argument << 8) | bytecode[++i];
+                }
             }
 
             stream << argument;

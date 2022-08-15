@@ -34,7 +34,7 @@ void runInterpreter(const unacpp::BytecodeModule &bytecode, bool readInput) {
         }
     }
     else {
-        printResult(unacpp::getResult(bytecode, unacpp::BigInt{}));
+        printResult(unacpp::getResult(bytecode, 0));
     }
 }
 

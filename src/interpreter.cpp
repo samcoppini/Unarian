@@ -28,22 +28,22 @@ StackFrame::StackFrame(BigInt val, uint32_t instIndex)
     , instIndex(instIndex)
 {}
 
-void add(BigInt &num, uint64_t addend) {
+void add(BigInt &num, BigInt addend) {
     num += addend;
 }
 
-bool divide(BigInt &num, uint64_t divisor) {
+bool divide(BigInt &num, BigInt divisor) {
     BigInt rem = num % divisor;
     BigInt result = num / divisor;
     num = result;
     return rem == 0;
 }
 
-void multiply(BigInt &num, uint64_t factor) {
+void multiply(BigInt &num, BigInt factor) {
     num *= factor;
 }
 
-bool subtract(BigInt &num, uint64_t subtrahend) {
+bool subtract(BigInt &num, BigInt subtrahend) {
     if (subtrahend > num) {
         return false;
     }
@@ -62,11 +62,15 @@ std::optional<BigInt> getResult(const BytecodeModule &bytecode, BigInt initialVa
         return bytecode[instIndex++];
     };
 
-    auto getValue = [&] {
-        uint16_t val = 0;
-        val |= getByte() << 8;
-        val |= getByte() << 0;
-        return val;
+    auto getLongValue = [&] {
+        BigInt value = 0;
+        uint8_t byte = 0x80;
+        while (byte & 0x80) {
+            byte = getByte();
+            value <<= 7;
+            value |= (byte & 0x7F);
+        }
+        return value;
     };
 
     auto getAddress = [&] {
@@ -81,7 +85,11 @@ std::optional<BigInt> getResult(const BytecodeModule &bytecode, BigInt initialVa
     while (true) {
         switch (getByte()) {
         case OpCode::Add:
-            add(*val, getValue());
+            add(*val, getByte());
+            break;
+
+        case OpCode::AddLong:
+            add(*val, getLongValue());
             break;
 
         case OpCode::Call: {
@@ -98,17 +106,33 @@ std::optional<BigInt> getResult(const BytecodeModule &bytecode, BigInt initialVa
             break;
 
         case OpCode::DivFail:
-            if (!divide(*val, getValue())) {
+            if (!divide(*val, getByte())) {
+                val = std::nullopt;
+            }
+            break;
+
+        case OpCode::DivFailLong:
+            if (!divide(*val, getLongValue())) {
                 val = std::nullopt;
             }
             break;
 
         case OpCode::DivFloor:
-            divide(*val, getValue());
+            divide(*val, getByte());
+            break;
+
+        case OpCode::DivFloorLong:
+            divide(*val, getLongValue());
             break;
 
         case OpCode::Equal:
-            if (*val != getValue()) {
+            if (*val != getByte()) {
+                val = std::nullopt;
+            }
+            break;
+
+        case OpCode::EqualLong:
+            if (*val != getLongValue()) {
                 val = std::nullopt;
             }
             break;
@@ -128,7 +152,11 @@ std::optional<BigInt> getResult(const BytecodeModule &bytecode, BigInt initialVa
         }
 
         case OpCode::Mult:
-            multiply(*val, getValue());
+            multiply(*val, getByte());
+            break;
+
+        case OpCode::MultLong:
+            multiply(*val, getLongValue());
             break;
 
         case OpCode::Not:
@@ -167,7 +195,13 @@ std::optional<BigInt> getResult(const BytecodeModule &bytecode, BigInt initialVa
             break;
 
         case OpCode::Sub:
-            if (!subtract(*val, getValue())) {
+            if (!subtract(*val, getByte())) {
+                val = std::nullopt;
+            }
+            break;
+
+        case OpCode::SubLong:
+            if (!subtract(*val, getLongValue())) {
                 val = std::nullopt;
             }
             break;

@@ -10,20 +10,20 @@
 
 namespace unacpp {
 
-AddProgram::AddProgram(uint32_t amount)
-    : amount_(amount)
+AddProgram::AddProgram(BigInt amount)
+    : amount_(std::move(amount))
 {}
 
-uint32_t AddProgram::getAmount() const {
+const BigInt &AddProgram::getAmount() const {
     return amount_;
 }
 
-DivideProgram::DivideProgram(uint32_t divisor, Remainder remainder)
-    : divisor_(divisor)
+DivideProgram::DivideProgram(BigInt divisor, Remainder remainder)
+    : divisor_(std::move(divisor))
     , remainder_(remainder)
 {}
 
-uint32_t DivideProgram::getDivisor() const {
+const BigInt &DivideProgram::getDivisor() const {
     return divisor_;
 }
 
@@ -31,11 +31,11 @@ DivideProgram::Remainder DivideProgram::getRemainderBehavior() const {
     return remainder_;
 }
 
-EqualProgram::EqualProgram(uint32_t amount)
-    : amount_(amount)
+EqualProgram::EqualProgram(BigInt amount)
+    : amount_(std::move(amount))
 {}
 
-uint32_t EqualProgram::getAmount() const {
+const BigInt &EqualProgram::getAmount() const {
     return amount_;
 }
 
@@ -52,19 +52,19 @@ const FilePosition &FuncCall::getPos() const {
     return pos_;
 }
 
-MultiplyProgram::MultiplyProgram(uint32_t amount)
-    : amount_(amount)
+MultiplyProgram::MultiplyProgram(BigInt amount)
+    : amount_(std::move(amount))
 {}
 
-uint32_t MultiplyProgram::getAmount() const {
+const BigInt &MultiplyProgram::getAmount() const {
     return amount_;
 }
 
-SubtractProgram::SubtractProgram(uint32_t amount)
-    : amount_(amount)
+SubtractProgram::SubtractProgram(BigInt amount)
+    : amount_(std::move(amount))
 {}
 
-uint32_t SubtractProgram::getAmount() const {
+const BigInt &SubtractProgram::getAmount() const {
     return amount_;
 }
 

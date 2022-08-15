@@ -84,68 +84,90 @@ bool inlinePrograms(ProgramMap &programs, const std::string &programName) {
 }
 
 Branch condenseMathBranch(const Branch &branch) {
-    uint16_t curAdd = 0;
-    uint16_t curSub = 0;
+    BigInt curAdd = 0;
+    BigInt curSub = 0;
+    BigInt curMul = 1;
+    BigInt curDiv = 1;
+    std::optional<DivideProgram::Remainder> divType;
 
     std::vector<Instruction> insts;
 
-    auto addSub = [&] {
-        if (curSub != 0) {
-            insts.push_back(SubtractProgram{curSub});
+    auto pushInstructions = [&] {
+        if (curSub > 0) {
+            insts.push_back(SubtractProgram{std::move(curSub)});
             curSub = 0;
         }
-    };
 
-    auto addAdd = [&] {
-        if (curAdd != 0) {
-            insts.push_back(AddProgram{curAdd});
+        if (curDiv != 1) {
+            insts.push_back(DivideProgram{std::move(curDiv), *divType});
+            curDiv = 1;
+            divType = std::nullopt;
+        }
+
+        if (curMul != 1) {
+            insts.push_back(MultiplyProgram{std::move(curMul)});
+            curMul = 1;
+        }
+
+        if (curAdd > 0) {
+            insts.push_back(AddProgram{std::move(curAdd)});
             curAdd = 0;
         }
     };
 
     for (auto &inst: branch.getInstructions()) {
-        std::visit([&] (auto &&arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, AddProgram>) {
-                addSub();
-                auto newAdd = curAdd + arg.getAmount();
-                if (newAdd > UINT16_MAX) {
-                    curAdd = UINT16_MAX;
-                    addAdd();
-                    newAdd -= UINT16_MAX;
-                }
-                curAdd = newAdd;
+        if (auto add = std::get_if<AddProgram>(&inst); add) {
+            if (curSub > 0) {
+                pushInstructions();
             }
-            else if constexpr (std::is_same_v<T, SubtractProgram>) {
-                if (curAdd > 0) {
-                    if (curAdd >= arg.getAmount()) {
-                        curAdd -= arg.getAmount();
-                    }
-                    else {
-                        curSub = arg.getAmount() - curAdd;
-                        curAdd = 0;
-                    }
-                }
-                else {
-                    auto newSub = curSub + arg.getAmount();
-                    if (newSub > UINT16_MAX) {
-                        curSub = UINT16_MAX;
-                        addSub();
-                        newSub -= UINT16_MAX;
-                    }
-                    curSub = newSub;
-                }
+            curAdd += add->getAmount();
+        }
+        else if (auto sub = std::get_if<SubtractProgram>(&inst); sub) {
+            if (curMul != 1 || curDiv != 1) {
+                pushInstructions();
+            }
+            if (curAdd == 0) {
+                curSub += sub->getAmount();
+            }
+            else if (curAdd >= sub->getAmount()) {
+                curAdd -= sub->getAmount();
             }
             else {
-                addAdd();
-                addSub();
-                insts.push_back(inst);
+                curSub = sub->getAmount() - curAdd;
             }
-        }, inst);
+        }
+        else if (auto mul = std::get_if<MultiplyProgram>(&inst); mul) {
+            if (mul->getAmount() == 0) {
+                curAdd = 0;
+                curDiv = 1;
+                curMul = 0;
+                pushInstructions();
+            }
+            else {
+                if (curSub > 0 || curDiv != 1) {
+                    pushInstructions();
+                }
+                curMul *= mul->getAmount();
+                curAdd *= mul->getAmount();
+            }
+        }
+        else if (auto div = std::get_if<DivideProgram>(&inst); div) {
+            if (curSub > 0 || curAdd > 0 || curMul != 1) {
+                pushInstructions();
+            }
+            if (divType != std::nullopt && div->getRemainderBehavior() != *divType) {
+                pushInstructions();
+            }
+            divType = div->getRemainderBehavior();
+            curDiv *= div->getDivisor();
+        }
+        else {
+            pushInstructions();
+            insts.push_back(inst);
+        }
     }
 
-    addAdd();
-    addSub();
+    pushInstructions();
 
     return Branch{insts};
 }
@@ -162,7 +184,7 @@ void condenseMath(ProgramMap &programs) {
     }
 }
 
-std::optional<uint32_t> checkMultiply(const Program &program, const std::string &funcName) {
+std::optional<BigInt> checkMultiply(const Program &program, const std::string &funcName) {
     auto branches = program.getBranches();
     if (branches.size() != 2) {
         return std::nullopt;
@@ -260,7 +282,7 @@ std::optional<uint32_t> checkIfEqual(const Program &program) {
     return 0;
 }
 
-std::optional<std::pair<uint32_t, DivideProgram::Remainder>> checkDivision(const Program &program, const std::string &funcName) {
+std::optional<std::pair<BigInt, DivideProgram::Remainder>> checkDivision(const Program &program, const std::string &funcName) {
     auto branches = program.getBranches();
     if (branches.size() != 2) {
         return std::nullopt;

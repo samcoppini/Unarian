@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "bigint.hpp"
 #include "position.hpp"
 
 #include <span>
@@ -23,12 +24,12 @@ class DebugPrint {};
 
 class AddProgram {
 private:
-    uint32_t amount_;
+    BigInt amount_;
 
 public:
-    AddProgram(uint32_t amount);
+    AddProgram(BigInt amount);
 
-    uint32_t getAmount() const;
+    const BigInt &getAmount() const;
 };
 
 class DivideProgram {
@@ -39,26 +40,26 @@ public:
     };
 
 private:
-    uint32_t divisor_;
+    BigInt divisor_;
 
     Remainder remainder_;
 
 public:
-    DivideProgram(uint32_t divisor, Remainder remainder);
+    DivideProgram(BigInt divisor, Remainder remainder);
 
-    uint32_t getDivisor() const;
+    const BigInt &getDivisor() const;
 
     Remainder getRemainderBehavior() const;
 };
 
 class EqualProgram {
 private:
-    uint32_t amount_;
+    BigInt amount_;
 
 public:
-    EqualProgram(uint32_t amount);
+    EqualProgram(BigInt amount);
 
-    uint32_t getAmount() const;
+    const BigInt &getAmount() const;
 };
 
 class FuncCall {
@@ -77,24 +78,24 @@ public:
 
 class MultiplyProgram {
 private:
-    uint32_t amount_;
+    BigInt amount_;
 
 public:
-    MultiplyProgram(uint32_t amount);
+    MultiplyProgram(BigInt amount);
 
-    uint32_t getAmount() const;
+    const BigInt &getAmount() const;
 };
 
 class NotProgram {};
 
 class SubtractProgram {
 private:
-    uint32_t amount_;
+    BigInt amount_;
 
 public:
-    SubtractProgram(uint32_t amount);
+    SubtractProgram(BigInt amount);
 
-    uint32_t getAmount() const;
+    const BigInt &getAmount() const;
 };
 
 using Instruction = std::variant<

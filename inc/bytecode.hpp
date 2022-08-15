@@ -18,19 +18,25 @@ namespace unacpp {
 
 enum OpCode: uint8_t {
     Add,
+    AddLong,
     Call,
     Dec,
     DivFail,
+    DivFailLong,
     DivFloor,
+    DivFloorLong,
     Equal,
+    EqualLong,
     Inc,
     JumpOnFailure,
     Mult,
+    MultLong,
     Not,
     Print,
     Ret,
     RetOnFailure,
     Sub,
+    SubLong,
     TailCall,
 };
 

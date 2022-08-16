@@ -18,29 +18,27 @@ namespace unacpp {
 
 enum OpCode: uint8_t {
     Add,
-    AddLong,
     Call,
     Dec,
     DivFail,
-    DivFailLong,
     DivFloor,
-    DivFloorLong,
     Equal,
-    EqualLong,
     Inc,
     JumpOnFailure,
     Mult,
-    MultLong,
     Not,
     Print,
     Ret,
     RetOnFailure,
     Sub,
-    SubLong,
     TailCall,
 };
 
-using BytecodeModule = std::vector<uint8_t>;
+struct BytecodeModule {
+    std::vector<uint8_t> instructions;
+
+    std::vector<BigInt> constants;
+};
 
 BytecodeModule generateBytecode(const ProgramMap &program, const std::string &mainName, bool debugMode);
 

@@ -16,13 +16,15 @@ namespace {
 
 using FuncFailureMap = std::unordered_map<std::string, bool>;
 
+using ConstantMap = std::unordered_map<BigInt, uint16_t>;
+
 struct ProgramReference {
     uint32_t byteIndex;
 
     std::string_view funcName;
 };
 
-void replacePlaceholderAddress(BytecodeModule &bytecode, uint32_t replaceIndex, uint32_t address) {
+void replacePlaceholderAddress(std::vector<uint8_t> &bytecode, uint32_t replaceIndex, uint32_t address) {
     bytecode[replaceIndex + 0] = (address >> 24) & 0xFF;
     bytecode[replaceIndex + 1] = (address >> 16) & 0xFF;
     bytecode[replaceIndex + 2] = (address >>  8) & 0xFF;
@@ -70,11 +72,12 @@ bool funcCallCanFail(const ProgramMap &programs, const std::string &funcName, Fu
 }
 
 void generateBranch(
-    BytecodeModule &bytecode,
+    std::vector<uint8_t> &bytecode,
     const ProgramMap &programs,
     const Branch &branch,
     std::vector<ProgramReference> &unresolvedReferences,
     FuncFailureMap funcsFail,
+    ConstantMap &constants,
     bool lastBranch,
     bool debugMode)
 {
@@ -86,23 +89,19 @@ void generateBranch(
     };
 
     auto addValue = [&] (BigInt val) {
-        if (val <= 255) {
-            bytecode.push_back(val.convert_to<uint8_t>());
+        uint16_t index;
+
+        auto constantIter = constants.find(val);
+        if (constantIter != constants.end()) {
+            index = constantIter->second;
         }
         else {
-            auto insertIndex = bytecode.size();
-            auto firstByte = true;
-            bytecode.back()++;
-            while (val > 0) {
-                uint8_t newByte = (val & 0x7F).convert_to<uint8_t>();
-                if (!firstByte) {
-                    newByte |= 0x80;
-                }
-                bytecode.insert(bytecode.begin() + insertIndex, newByte);
-                val >>= 7;
-                firstByte = false;
-            }
+            index = constants.size();
+            constants[val] = index;
         }
+
+        bytecode.push_back((index & 0xFF00) >> 8);
+        bytecode.push_back((index & 0x00FF) >> 0);
     };
 
     for (size_t i = 0; i < instructions.size(); i++) {
@@ -200,70 +199,63 @@ void generateBranch(
 }
 
 void generateProgram(
-    BytecodeModule &bytecode,
+    std::vector<uint8_t> &bytecode,
     const ProgramMap &programs,
     const Program &program,
     std::vector<ProgramReference> &unresolvedReferences,
     FuncFailureMap &funcsFail,
+    ConstantMap &constants,
     bool debugMode)
 {
     auto branches = program.getBranches();
 
     for (size_t i = 0; i < branches.size(); i++) {
-        generateBranch(bytecode, programs, branches[i], unresolvedReferences, funcsFail, i + 1 == branches.size(), debugMode);
+        generateBranch(bytecode, programs, branches[i], unresolvedReferences, funcsFail, constants, i + 1 == branches.size(), debugMode);
     }
 }
 
-std::vector<size_t> argumentSizes(OpCode opcode) {
-    switch (opcode) {
-        case OpCode::AddLong:
-        case OpCode::DivFailLong:
-        case OpCode::DivFloorLong:
-        case OpCode::EqualLong:
-        case OpCode::MultLong:
-        case OpCode::SubLong:
-            return { 0 };
+enum class ArgType {
+    None,
+    Constant,
+    Address,
+};
 
+ArgType argumentType(OpCode opcode) {
+    switch (opcode) {
         case OpCode::Add:
         case OpCode::DivFail:
         case OpCode::DivFloor:
         case OpCode::Equal:
         case OpCode::Mult:
         case OpCode::Sub:
-            return { 1 };
+            return ArgType::Constant;
 
         case OpCode::Call:
         case OpCode::JumpOnFailure:
         case OpCode::TailCall:
-            return { 4 };
+            return ArgType::Address;
 
         default:
-            return {};
+            return ArgType::None;
     }
 }
 
 std::string_view opcodeName(OpCode opcode) {
     switch (opcode) {
         case OpCode::Add:           return "ADD";
-        case OpCode::AddLong:       return "ADD";
         case OpCode::Call:          return "CALL";
         case OpCode::Dec:           return "DEC";
         case OpCode::DivFail:       return "DIV_FAIL";
-        case OpCode::DivFailLong:   return "DIV_FAIL";
         case OpCode::DivFloor:      return "DIV_FLOOR";
-        case OpCode::DivFloorLong:  return "DIV_FLOOR";
         case OpCode::Equal:         return "EQ";
-        case OpCode::EqualLong:     return "EQ";
         case OpCode::Inc:           return "INC";
         case OpCode::JumpOnFailure: return "FAIL_JMP";
         case OpCode::Mult:          return "MULT";
-        case OpCode::MultLong:      return "MULT";
         case OpCode::Not:           return "NOT";
         case OpCode::Print:         return "PRINT";
         case OpCode::Ret:           return "RET";
         case OpCode::RetOnFailure:  return "FAIL_RET";
         case OpCode::Sub:           return "SUB";
-        case OpCode::SubLong:       return "SUB";
         case OpCode::TailCall:      return "TAIL_CALL";
         default:                    return "ERROR";
     }
@@ -272,54 +264,55 @@ std::string_view opcodeName(OpCode opcode) {
 } // anonymous namespace
 
 BytecodeModule generateBytecode(const ProgramMap &programs, const std::string &mainName, bool debugMode) {
-    BytecodeModule bytecode;
+    std::vector<uint8_t> instructions;
     std::vector<ProgramReference> programReferences;
     std::unordered_map<std::string_view, uint32_t> programStarts;
     FuncFailureMap funcsFail;
+    ConstantMap constantsMap;
 
-    generateProgram(bytecode, programs, programs.at(mainName), programReferences, funcsFail, debugMode);
+    generateProgram(instructions, programs, programs.at(mainName), programReferences, funcsFail, constantsMap, debugMode);
 
     for (auto &[progName, program]: programs) {
         if (mainName != progName) {
-            programStarts[progName] = bytecode.size();
-            generateProgram(bytecode, programs, program, programReferences, funcsFail, debugMode);
+            programStarts[progName] = instructions.size();
+            generateProgram(instructions, programs, program, programReferences, funcsFail, constantsMap, debugMode);
         }
     }
 
     for (auto [index, funcName]: programReferences) {
-        replacePlaceholderAddress(bytecode, index, programStarts.at(funcName));
+        replacePlaceholderAddress(instructions, index, programStarts.at(funcName));
     }
 
-    return bytecode;
+    std::vector<BigInt> constants(constantsMap.size());
+    for (auto &[constant, index]: constantsMap) {
+        constants[index] = constant;
+    }
+
+    return { instructions, constants };
 }
 
 std::string bytecodeToString(const BytecodeModule &bytecode) {
     std::stringstream stream;
+    auto &[instructions, constants] = bytecode;
 
-    for (size_t i = 0; i < bytecode.size(); i++) {
-        stream << i << ": " << opcodeName(static_cast<OpCode>(bytecode[i]));
+    for (size_t i = 0; i < instructions.size(); i++) {
+        stream << i << ": " << opcodeName(static_cast<OpCode>(instructions[i]));
 
-        auto argSizes = argumentSizes(static_cast<OpCode>(bytecode[i]));
+        auto argType = argumentType(static_cast<OpCode>(instructions[i]));
 
-        for (auto argSize: argSizes) {
-            stream << ' ';
-
-            BigInt argument = 0;
-            if (argSize == 0) {
-                uint8_t argByte = 0x80;
-                while (argByte & 0x80) {
-                    argByte = bytecode[++i];
-                    argument <<= 7;
-                    argument |= (argByte & 0x7F);
-                }
-            }
-            else {
-                for (size_t j = 0; j < argSize; j++) {
-                    argument = (argument << 8) | bytecode[++i];
-                }
-            }
-
-            stream << argument;
+        if (argType == ArgType::Address) {
+            uint32_t address = 0;
+            address |= instructions[++i] << 24;
+            address |= instructions[++i] << 16;
+            address |= instructions[++i] <<  8;
+            address |= instructions[++i] <<  0;
+            stream << " " << address;
+        }
+        else if (argType == ArgType::Constant) {
+            uint16_t index = 0;
+            index |= instructions[++i] << 8;
+            index |= instructions[++i] << 0;
+            stream << " " << constants[index];
         }
 
         stream << '\n';

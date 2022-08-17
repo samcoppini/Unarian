@@ -76,6 +76,20 @@ public:
     const FilePosition &getPos() const;
 };
 
+class ModEqualProgram {
+private:
+    BigInt amount_;
+
+    BigInt modulo_;
+
+public:
+    ModEqualProgram(BigInt amount, BigInt modulo);
+
+    const BigInt &getAmount() const;
+
+    const BigInt &getModulo() const;
+};
+
 class MultiplyProgram {
 private:
     BigInt amount_;
@@ -104,6 +118,7 @@ using Instruction = std::variant<
     DivideProgram,
     EqualProgram,
     FuncCall,
+    ModEqualProgram,
     MultiplyProgram,
     NotProgram,
     SubtractProgram

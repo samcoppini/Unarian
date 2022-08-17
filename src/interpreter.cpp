@@ -128,6 +128,15 @@ std::optional<BigInt> getResult(const BytecodeModule &bytecodeModule, BigInt ini
             break;
         }
 
+        case OpCode::ModEqual: {
+            auto cmp = getValue();
+            auto modulo = getValue();
+            if (*val % modulo != cmp) {
+                val = std::nullopt;
+            }
+            break;
+        }
+
         case OpCode::Mult:
             multiply(*val, getValue());
             break;

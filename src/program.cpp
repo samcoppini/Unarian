@@ -52,6 +52,19 @@ const FilePosition &FuncCall::getPos() const {
     return pos_;
 }
 
+ModEqualProgram::ModEqualProgram(BigInt amount, BigInt modulo)
+    : amount_(std::move(amount))
+    , modulo_(std::move(modulo))
+{}
+
+const BigInt &ModEqualProgram::getAmount() const {
+    return amount_;
+}
+
+const BigInt &ModEqualProgram::getModulo() const {
+    return modulo_;
+}
+
 MultiplyProgram::MultiplyProgram(BigInt amount)
     : amount_(std::move(amount))
 {}

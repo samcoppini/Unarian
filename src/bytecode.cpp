@@ -37,6 +37,7 @@ bool branchCanFail(const ProgramMap &programs, const Branch &branch, std::unorde
     for (auto &inst: branch.getInstructions()) {
         if (std::holds_alternative<SubtractProgram>(inst) ||
             std::holds_alternative<EqualProgram>(inst) ||
+            std::holds_alternative<ModEqualProgram>(inst) ||
             (std::holds_alternative<DivideProgram>(inst) &&
              std::get<DivideProgram>(inst).getRemainderBehavior() == DivideProgram::Remainder::Fail))
         {
@@ -153,6 +154,12 @@ void generateBranch(
             addValue(eq->getAmount());
             addFailureCheck();
         }
+        else if (auto modEq = std::get_if<ModEqualProgram>(&inst); modEq) {
+            bytecode.push_back(OpCode::ModEqual);
+            addValue(modEq->getAmount());
+            addValue(modEq->getModulo());
+            addFailureCheck();
+        }
         else if (auto sub = std::get_if<SubtractProgram>(&inst); sub) {
             if (sub->getAmount() == 1) {
                 bytecode.push_back(OpCode::Dec);
@@ -215,12 +222,11 @@ void generateProgram(
 }
 
 enum class ArgType {
-    None,
     Constant,
     Address,
 };
 
-ArgType argumentType(OpCode opcode) {
+std::vector<ArgType> argumentType(OpCode opcode) {
     switch (opcode) {
         case OpCode::Add:
         case OpCode::DivFail:
@@ -228,15 +234,18 @@ ArgType argumentType(OpCode opcode) {
         case OpCode::Equal:
         case OpCode::Mult:
         case OpCode::Sub:
-            return ArgType::Constant;
+            return { ArgType::Constant };
 
         case OpCode::Call:
         case OpCode::JumpOnFailure:
         case OpCode::TailCall:
-            return ArgType::Address;
+            return { ArgType::Address };
+
+        case OpCode::ModEqual:
+            return { ArgType::Constant, ArgType::Constant };
 
         default:
-            return ArgType::None;
+            return {};
     }
 }
 
@@ -250,6 +259,7 @@ std::string_view opcodeName(OpCode opcode) {
         case OpCode::Equal:         return "EQ";
         case OpCode::Inc:           return "INC";
         case OpCode::JumpOnFailure: return "FAIL_JMP";
+        case OpCode::ModEqual:      return "MOD_EQUAL";
         case OpCode::Mult:          return "MULT";
         case OpCode::Not:           return "NOT";
         case OpCode::Print:         return "PRINT";
@@ -298,21 +308,23 @@ std::string bytecodeToString(const BytecodeModule &bytecode) {
     for (size_t i = 0; i < instructions.size(); i++) {
         stream << i << ": " << opcodeName(static_cast<OpCode>(instructions[i]));
 
-        auto argType = argumentType(static_cast<OpCode>(instructions[i]));
+        auto argTypes = argumentType(static_cast<OpCode>(instructions[i]));
 
-        if (argType == ArgType::Address) {
-            uint32_t address = 0;
-            address |= instructions[++i] << 24;
-            address |= instructions[++i] << 16;
-            address |= instructions[++i] <<  8;
-            address |= instructions[++i] <<  0;
-            stream << " " << address;
-        }
-        else if (argType == ArgType::Constant) {
-            uint16_t index = 0;
-            index |= instructions[++i] << 8;
-            index |= instructions[++i] << 0;
-            stream << " " << constants[index];
+        for (auto argType: argTypes) {
+            if (argType == ArgType::Address) {
+                uint32_t address = 0;
+                address |= instructions[++i] << 24;
+                address |= instructions[++i] << 16;
+                address |= instructions[++i] <<  8;
+                address |= instructions[++i] <<  0;
+                stream << " " << address;
+            }
+            else if (argType == ArgType::Constant) {
+                uint16_t index = 0;
+                index |= instructions[++i] << 8;
+                index |= instructions[++i] << 0;
+                stream << " " << constants[index];
+            }
         }
 
         stream << '\n';

@@ -331,6 +331,49 @@ std::optional<std::pair<BigInt, DivideProgram::Remainder>> checkDivision(const P
     return std::nullopt;
 }
 
+std::optional<std::pair<BigInt, BigInt>> checkModEqual(const Program &program, const std::string &funcName) {
+    auto branches = program.getBranches();
+    if (branches.size() != 2) {
+        return std::nullopt;
+    }
+
+    auto firstInsts = branches[0].getInstructions();
+    if (firstInsts.size() != 3) {
+        return std::nullopt;
+    }
+
+    if (!std::holds_alternative<SubtractProgram>(firstInsts[0])) {
+        return std::nullopt;
+    }
+
+    auto &divisor = std::get<SubtractProgram>(firstInsts[0]).getAmount();
+
+    if (!std::holds_alternative<FuncCall>(firstInsts[1]) ||
+        std::get<FuncCall>(firstInsts[1]).getFuncName() != funcName)
+    {
+        return std::nullopt;
+    }
+
+    if (!std::holds_alternative<AddProgram>(firstInsts[2]) ||
+        std::get<AddProgram>(firstInsts[2]).getAmount() != divisor)
+    {
+        return std::nullopt;
+    }
+
+    auto secondInsts = branches[1].getInstructions();
+    if (secondInsts.size() != 1) {
+        return std::nullopt;
+    }
+
+    if (std::holds_alternative<EqualProgram>(secondInsts[0]))
+    {
+        auto equalVal = std::get<EqualProgram>(secondInsts[0]).getAmount();
+        return {{ equalVal, divisor }};
+    }
+
+    return std::nullopt;
+}
+
 void simplifyFunctions(ProgramMap &programs) {
     for (auto &[name, prog]: programs) {
         auto factor = checkMultiply(prog, name);
@@ -354,6 +397,13 @@ void simplifyFunctions(ProgramMap &programs) {
 
         if (checkNot(prog)) {
             prog = Program{{Branch{{NotProgram{}}}}};
+            continue;
+        }
+
+        auto modEq = checkModEqual(prog, name);
+        if (modEq != std::nullopt) {
+            auto &[equalVal, divisor] = *modEq;
+            prog = Program{{Branch{{ModEqualProgram{equalVal, divisor}}}}};
             continue;
         }
     }

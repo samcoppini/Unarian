@@ -25,6 +25,7 @@ enum OpCode: uint8_t {
     Equal,
     Inc,
     JumpOnFailure,
+    ModEqual,
     Mult,
     Not,
     Print,

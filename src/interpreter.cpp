@@ -20,7 +20,7 @@ struct StackFrame {
 
     BigInt val;
 
-    size_t instIndex;
+    uint32_t instIndex;
 };
 
 StackFrame::StackFrame(BigInt val, uint32_t instIndex)

@@ -31,7 +31,10 @@ unarian_exe = executable(
     'unarian',
     unarian_src,
     include_directories: unarian_inc,
-    dependencies: cli11_dep,
+    dependencies: [
+        boost_dep,
+        cli11_dep,
+    ],
     install: true,
 )
 

@@ -35,10 +35,10 @@ def run_test(exe_path: str, test_path: str) -> int:
         input_bytes = bytes(input, 'utf-8')
 
         proc = subprocess.run([exe_path, test_path, '-ig'], input=bytes(input, 'utf-8'), capture_output=True)
-        actual_output = proc.stdout
+        actual_output = str(proc.stdout, 'utf-8').strip()
 
-        print(f'Expected {output} for input {input}. Received {str(actual_output, "utf-8")}')
-        if actual_output[:-1] != bytes(output, 'utf-8'):
+        print(f'Expected {output} for input {input}. Received {actual_output}')
+        if actual_output != output:
             had_failure = True
 
     return 1 if had_failure else 0

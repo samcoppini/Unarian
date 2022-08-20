@@ -97,7 +97,7 @@ void generateBranch(
             index = constantIter->second;
         }
         else {
-            index = constants.size();
+            index = static_cast<uint16_t>(constants.size());
             constants[val] = index;
         }
 
@@ -117,7 +117,7 @@ void generateBranch(
             }
             else {
                 bytecode.push_back(OpCode::JumpOnFailure);
-                nextBranchReferences.push_back(bytecode.size());
+                nextBranchReferences.push_back(static_cast<uint32_t>(bytecode.size()));
                 addPlaceholderAddress();
             }
         };
@@ -179,13 +179,13 @@ void generateBranch(
             else {
                 bytecode.push_back(OpCode::Call);
             }
-            unresolvedReferences.emplace_back(bytecode.size(), call->getFuncName());
+            unresolvedReferences.emplace_back(static_cast<uint32_t>(bytecode.size()), call->getFuncName());
             addPlaceholderAddress();
 
             if (callCanFail) {
                 if (!lastBranch) {
                     bytecode.push_back(OpCode::JumpOnFailure);
-                    nextBranchReferences.push_back(bytecode.size());
+                    nextBranchReferences.push_back(static_cast<uint32_t>(bytecode.size()));
                     addPlaceholderAddress();
                 }
                 else if (!lastInst) {
@@ -201,7 +201,7 @@ void generateBranch(
     bytecode.push_back(OpCode::Ret);
 
     for (auto ref: nextBranchReferences) {
-        replacePlaceholderAddress(bytecode, ref, bytecode.size());
+        replacePlaceholderAddress(bytecode, ref, static_cast<uint32_t>(bytecode.size()));
     }
 }
 
@@ -284,7 +284,7 @@ BytecodeModule generateBytecode(const ProgramMap &programs, const std::string &m
 
     for (auto &[progName, program]: programs) {
         if (mainName != progName) {
-            programStarts[progName] = instructions.size();
+            programStarts[progName] = static_cast<uint32_t>(instructions.size());
             generateProgram(instructions, programs, program, programReferences, funcsFail, constantsMap, debugMode);
         }
     }

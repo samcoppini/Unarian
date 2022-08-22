@@ -259,7 +259,7 @@ std::string_view opcodeName(OpCode opcode) {
         case OpCode::Equal:         return "EQ";
         case OpCode::Inc:           return "INC";
         case OpCode::JumpOnFailure: return "FAIL_JMP";
-        case OpCode::ModEqual:      return "MOD_EQUAL";
+        case OpCode::ModEqual:      return "MOD_EQ";
         case OpCode::Mult:          return "MULT";
         case OpCode::Not:           return "NOT";
         case OpCode::Print:         return "PRINT";

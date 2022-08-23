@@ -1,4 +1,5 @@
 unarian_tests = [
+    'add_sub',
     'branches',
     'decrement',
     'div',

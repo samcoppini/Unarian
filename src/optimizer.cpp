@@ -134,6 +134,7 @@ Branch condenseMathBranch(const Branch &branch) {
             }
             else {
                 curSub = sub->getAmount() - curAdd;
+                curAdd = 0;
             }
         }
         else if (auto mul = std::get_if<MultiplyProgram>(&inst); mul) {

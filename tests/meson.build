@@ -1,17 +1,14 @@
 unarian_tests = [
+    'add',
     'add_sub',
     'branches',
-    'decrement',
     'div',
-    'div_if',
-    'double',
     'factorial',
     'fibonacci',
-    'increment',
-    'million',
+    'mod',
+    'mult',
     'nested',
-    'not',
-    'zero',
+    'sub',
 ]
 
 python = import('python').find_installation('python3')

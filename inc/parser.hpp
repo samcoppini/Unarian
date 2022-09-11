@@ -67,7 +67,7 @@ private:
     void checkForUndefinedPrograms();
 
 public:
-    Parser(std::string_view fileContent, std::string_view expr);
+    Parser(std::string_view fileContent, std::string_view expr, bool debugMode);
 
     const std::string &getExpressionName() const;
 

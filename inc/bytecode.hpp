@@ -106,7 +106,7 @@ struct BytecodeModule {
     std::vector<BigInt> constants;
 };
 
-BytecodeModule generateBytecode(const ProgramMap &program, const std::string &mainName, bool debugMode);
+BytecodeModule generateBytecode(const ProgramMap &program, const std::string &mainName);
 
 std::string bytecodeToString(const BytecodeModule &bytecode);
 

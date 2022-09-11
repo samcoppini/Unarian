@@ -163,13 +163,19 @@ void Parser::checkForUndefinedPrograms() {
     }
 }
 
-Parser::Parser(std::string_view fileContent, std::string_view expr)
+Parser::Parser(std::string_view fileContent, std::string_view expr, bool debugMode)
     : tokens_(getTokens(fileContent))
     , index_(0)
 {
-    programs_.insert({"!", Program{{Branch{{DebugPrint{}}}}}});
     programs_.insert({"-", Program{{Branch{{SubtractProgram{1}}}}}});
     programs_.insert({"+", Program{{Branch{{AddProgram{1}}}}}});
+
+    if (debugMode) {
+        programs_.insert({"!", Program{{Branch{{DebugPrint{}}}}}});
+    }
+    else {
+        programs_.insert({"!", Program{{Branch{{}}}}});
+    }
 
     parseFilePrograms();
     parseExpression(expr);

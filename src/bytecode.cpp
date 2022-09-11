@@ -79,8 +79,7 @@ void generateBranch(
     std::vector<ProgramReference> &unresolvedReferences,
     FuncFailureMap funcsFail,
     ConstantMap &constants,
-    bool lastBranch,
-    bool debugMode)
+    bool lastBranch)
 {
     auto instructions = branch.getInstructions();
     std::vector<uint32_t> nextBranchReferences;
@@ -193,7 +192,7 @@ void generateBranch(
                 }
             }
         }
-        else if (std::holds_alternative<DebugPrint>(inst) && debugMode) {
+        else if (std::holds_alternative<DebugPrint>(inst)) {
             bytecode.push_back(OpCode::Print);
         }
     }
@@ -211,13 +210,12 @@ void generateProgram(
     const Program &program,
     std::vector<ProgramReference> &unresolvedReferences,
     FuncFailureMap &funcsFail,
-    ConstantMap &constants,
-    bool debugMode)
+    ConstantMap &constants)
 {
     auto branches = program.getBranches();
 
     for (size_t i = 0; i < branches.size(); i++) {
-        generateBranch(bytecode, programs, branches[i], unresolvedReferences, funcsFail, constants, i + 1 == branches.size(), debugMode);
+        generateBranch(bytecode, programs, branches[i], unresolvedReferences, funcsFail, constants, i + 1 == branches.size());
     }
 }
 
@@ -273,19 +271,19 @@ std::string_view opcodeName(OpCode opcode) {
 
 } // anonymous namespace
 
-BytecodeModule generateBytecode(const ProgramMap &programs, const std::string &mainName, bool debugMode) {
+BytecodeModule generateBytecode(const ProgramMap &programs, const std::string &mainName) {
     std::vector<uint8_t> instructions;
     std::vector<ProgramReference> programReferences;
     std::unordered_map<std::string_view, uint32_t> programStarts;
     FuncFailureMap funcsFail;
     ConstantMap constantsMap;
 
-    generateProgram(instructions, programs, programs.at(mainName), programReferences, funcsFail, constantsMap, debugMode);
+    generateProgram(instructions, programs, programs.at(mainName), programReferences, funcsFail, constantsMap);
 
     for (auto &[progName, program]: programs) {
         if (mainName != progName) {
             programStarts[progName] = static_cast<uint32_t>(instructions.size());
-            generateProgram(instructions, programs, program, programReferences, funcsFail, constantsMap, debugMode);
+            generateProgram(instructions, programs, program, programReferences, funcsFail, constantsMap);
         }
     }
 

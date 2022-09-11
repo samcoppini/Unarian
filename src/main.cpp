@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
         fileContents = fileStream.str();
     }
 
-    unacpp::Parser parser{fileContents, expr};
+    unacpp::Parser parser{fileContents, expr, debugMode};
     auto fileParseResult = parser.getParseResult();
     if (std::holds_alternative<unacpp::ParseErrors>(fileParseResult)) {
         auto errors = std::get<unacpp::ParseErrors>(fileParseResult);
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     auto programName = parser.getExpressionName();
     auto optimizedPrograms = unacpp::optimizePrograms(programs, programName);
 
-    auto bytecode = unacpp::generateBytecode(optimizedPrograms, programName, debugMode);
+    auto bytecode = unacpp::generateBytecode(optimizedPrograms, programName);
     if (outputBytecode) {
         std::cout << unacpp::bytecodeToString(bytecode);
         return 0;

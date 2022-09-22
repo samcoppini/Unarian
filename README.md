@@ -33,7 +33,7 @@ $ unarian examples/power_of_two.un
 To run with interactive input, provide either `-i` or `--input` to the interpreter.
 
 ```bash
-$ echo 1 2 3 4 | unarian examples/power_of_two.un
+$ echo 1 2 3 4 | unarian examples/power_of_two.un -i
 # 2
 # 4
 # 8
@@ -44,7 +44,7 @@ To evaluate an expression, other than `main`, provide it using the `-e` or
 `--expr` options.
 
 ```bash
-$ echo 2 | unarian -e '^2 + +' examples/power_of_two.un
+$ echo 2 | unarian -e '^2 + +' examples/power_of_two.un -i
 # 6
 ```
 
@@ -53,7 +53,7 @@ interpreter. Note that only `!` is supported, to print the current value of the
 accumulator. The `?` option, to print a stack trace, is not supported.
 
 ```bash
-$ echo 2 | unarian --debug -e '! + ! + !' examples/some_file.un
+$ echo 2 | unarian --debug -e '! + ! + !' examples/some_file.un -i
 # 2
 # 3
 # 4
@@ -63,7 +63,7 @@ To see the bytecode generated for a file, pass the `-b` option. This probably
 not useful to you unless you're hacking on the interpreter.
 
 ```bash
-$ unarian examples/power_of_2.un
+$ unarian examples/power_of_2.un -b
 # 0: TAIL_CALL 6
 # 5: RET
 # 6: TAIL_CALL 12
